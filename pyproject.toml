@@ -28,7 +28,6 @@ exclude = ["tests"]
 python = "^3.8"
 datasets = "^1.2.1"
 fuzzywuzzy = "^0.18.0"
-joblib = "^1.0.1"
 more-itertools = "^8.7.0"
 pandas = "^1.2.1"
 python-Levenshtein = "^0.12.2"
@@ -44,6 +43,7 @@ ipykernel = "^5.4.3"
 jupyter = "^1.0.0"
 mypy = "^0.812"
 pytest = "^5.2"
+hypothesis = "^6.9.1"
 
 [tool.poetry.scripts]
 seq2rel-ds = "seq2rel_ds.main:app"
