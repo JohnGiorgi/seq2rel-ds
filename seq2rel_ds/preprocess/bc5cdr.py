@@ -22,7 +22,7 @@ def format_relation(ent_1_text, ent_1_type, ent_2_text, ent_2_type, rel_type):
     return f"<{rel_type.upper()}> {ent_1} {ent_2} </{rel_type.upper()}>"
 
 
-def parse_entity(annotation: str) -> List[Tuple[str]]:
+def parse_entity(annotation: List[str]) -> List[Tuple[str, str, str, str, str]]:
     """Returns each entity in `annotation` as a list of tuples containing the end index, entity
     text, entity type, and entity ID.
     """
@@ -130,7 +130,7 @@ def preprocess_bc5cdr(filepath: str) -> List[str]:
 
 
 @app.command(name="bc5cdr")
-def main(input_dir: str, output_dir: str) -> None:
+def main(input_dir: Path, output_dir: str) -> None:
     train_filepath = Path(input_dir) / TRAIN_FILENAME
     dev_filepath = Path(input_dir) / VALID_FILENAME
     test_filepath = Path(input_dir) / TEST_FILENAME
