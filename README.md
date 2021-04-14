@@ -1,5 +1,10 @@
 # seq2rel Datasets
 
+[![ci](https://github.com/JohnGiorgi/seq2rel-ds/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JohnGiorgi/seq2rel-ds/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/JohnGiorgi/seq2rel-ds/branch/main/graph/badge.svg?token=69PIN7H6UW)](https://codecov.io/gh/JohnGiorgi/seq2rel-ds)
+[![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
+![GitHub](https://img.shields.io/github/license/JohnGiorgi/seq2rel?color=blue)
+
 This is a sister repository to [`seq2rel`](https://github.com/JohnGiorgi/seq2rel) which aims to make it easy to generate training data.
 
 ## Installation
