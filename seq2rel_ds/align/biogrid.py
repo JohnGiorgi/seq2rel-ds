@@ -1,5 +1,7 @@
 import json
 import re
+from enum import Enum
+from itertools import chain
 from math import ceil
 from operator import itemgetter
 from pathlib import Path
@@ -9,21 +11,11 @@ import pandas as pd
 import spacy
 import typer
 from fuzzywuzzy import fuzz
-from joblib import Memory
 from more_itertools import chunked
-from enum import Enum
-
-from scispacy.abbreviation import AbbreviationDetector  # noqa
 from seq2rel_ds import msg
-from seq2rel_ds.common.util import (
-    fuzzy_match,
-    get_pubtator_response,
-    get_uniprot_synonyms,
-    sanitize_text,
-    set_seeds,
-)
+from seq2rel_ds.align.util import get_pubtator_response, get_uniprot_synonyms, Synonyms, Annotations
+from seq2rel_ds.common.util import fuzzy_match, sanitize_text, set_seeds
 from spacy.tokens.doc import Doc
-from itertools import chain
 
 app = typer.Typer(callback=set_seeds)
 
@@ -62,6 +54,16 @@ SYNONYMS_FN = "synonyms.json"
 ANNOTATIONS_FN = "annotations.json"
 BIOGRID_FN = "biogrid.tsv"
 
+# UniProt docs suggest that requests should contain <20000 identifiers
+# See: https://www.uniprot.org/help/uploadlists
+UNIPROT_IDS_PER_REQUEST = 1000
+# This is the number of PMIDs per request allowed by pubtators webservice.
+# See: https://www.ncbi.nlm.nih.gov/research/pubtator/api.html for details.
+PMIDS_PER_REQUEST = 1000
+# The number of documents spacy will process in parallel.
+# This was tuned on my local machine.
+SPACY_BATCH_SIZE = 100
+
 
 class TextSegment(str, Enum):
     title = "title"
@@ -69,23 +71,31 @@ class TextSegment(str, Enum):
     both = "both"
 
 
-# TODO: Would be better to move this to an __init__ so all files in the directory can use it.
-# Setup caching
-CACHE_DIR = Path.home() / ".seq2rel_ds"
-if not CACHE_DIR.exists():
-    CACHE_DIR.mkdir(parents=True)
-    msg.info(f"Created a cache directory at: {CACHE_DIR}")
-else:
-    msg.info(f"Using cache directory at: {CACHE_DIR}")
-memory = Memory(CACHE_DIR, verbose=0)
+def _load_scispacy(model: str):
+    # We don't need the tagger or parser. Disabling them will speed up processing.
+    try:
+        nlp = spacy.load(model, disable=["tagger", "parser"])
+    except OSError:
+        msg.fail(
+            (
+                f'ScispaCy model "{model}" not found. Make sure this is a valid ScispaCy'
+                " model (https://allenai.github.io/scispacy/) and it has been installed."
+            )
+        )
+        raise typer.Exit(code=1)
+    # The AbbreviationDetector is very important for good alignment quality.
+    try:
+        from scispacy.abbreviation import AbbreviationDetector
 
-
-def _load_scipacy(model: str):
-    # We don't need the tagger or parser.
-    # Disabling them will speed up processing.
-    nlp = spacy.load(model, disable=["tagger", "parser"])
-    abbreviation_pipe = AbbreviationDetector(nlp)
-    nlp.add_pipe(abbreviation_pipe)
+        abbreviation_pipe = AbbreviationDetector(nlp)
+        nlp.add_pipe(abbreviation_pipe)
+    except ImportError:
+        msg.warning(
+            (
+                "Could not import the ScispaCy AbbreviationDetector. This will"
+                " negatively impact the quality of alignments"
+            )
+        )
     return nlp
 
 
@@ -115,11 +125,11 @@ def _get_entities(doc: Doc) -> List[str]:
 def _sort_by_offset(items: List[str], offsets: List[int], **kwargs) -> List[str]:
     packed = list(zip(items, offsets))
     packed = sorted(packed, key=itemgetter(1), **kwargs)
-    items, offsets = list(zip(*packed))
-    return items
+    sorted_items, _ = list(zip(*packed))
+    return sorted_items
 
 
-def _align_row(row, text: str, ents: List[str], synonyms: Dict[str, List[str]]) -> Tuple[str]:
+def _align_row(row, text: str, ents: List[str], synonyms: Dict[str, List[str]]) -> Tuple[str, str]:
     # Get all the information we need from BioGrid df
     interactor_a = [row[INTERACTOR_A_SYMBOL]] + row[INTERACTOR_A_SYNONYMS].split("|")
     interactor_b = [row[INTERACTOR_B_SYMBOL]] + row[INTERACTOR_B_SYNONYMS].split("|")
@@ -138,10 +148,10 @@ def _align_row(row, text: str, ents: List[str], synonyms: Dict[str, List[str]]) 
 
     # Fuzzy match the extracted entities to the interactor names
     interactor_a_match = fuzzy_match(
-        interactor_a, ents, scorer=fuzz.token_sort_ratio, score_cutoff=90, limit=3
+        interactor_a, ents, scorer=fuzz.token_sort_ratio, score_cutoff=70, limit=3
     )
     interactor_b_match = fuzzy_match(
-        interactor_b, ents, scorer=fuzz.token_sort_ratio, score_cutoff=90, limit=3
+        interactor_b, ents, scorer=fuzz.token_sort_ratio, score_cutoff=70, limit=3
     )
 
     # TODO: Here, we make a strong assumption that only dimers will contain interactions
@@ -153,12 +163,12 @@ def _align_row(row, text: str, ents: List[str], synonyms: Dict[str, List[str]]) 
 
 
 def _align(
-    input_dir: str,
-    output_fp: Optional[str] = None,
+    input_dir: Path,
+    output_fp: Optional[Path] = None,
     text_segment: TextSegment = TextSegment.both,
     max_instances: Optional[int] = None,
     pmid_whitelist: Optional[List[str]] = None,
-) -> List[str]:
+) -> Dict[str, List[str]]:
     msg.divider("Alignment")
 
     # TODO: Should check if input_dir exists, raising an error if not. Can we do that
@@ -182,20 +192,20 @@ def _align(
         pmids = list(set(annotations.keys()) & set(pmid_whitelist))
     else:
         pmids = list(annotations.keys())
+    msg.info(f"Alignments will be generated from {len(pmids)} PMIDs")
+
+    max_instances = max_instances or len(df)
+    msg.info(f"Total number of alignments will be restricted to {max_instances}")
 
     alignments = {}
-    max_instances = max_instances or len(pmids)
     with typer.progressbar(length=max_instances, label="Aligning") as progress:
         for i, pmid in enumerate(pmids):
-            if text_segment.value == "title":
-                text = annotations[pmid]["title"]["text"]
-                ents = annotations[pmid]["title"]["ents"]
-            elif text_segment.value == "abstract":
-                text = annotations[pmid]["abstract"]["text"]
-                ents = annotations[pmid]["abstract"]["ents"]
-            else:
+            if text_segment.value == "both":
                 text = annotations[pmid]["title"]["text"] + annotations[pmid]["abstract"]["text"]
                 ents = annotations[pmid]["title"]["ents"] + annotations[pmid]["abstract"]["ents"]
+            else:
+                text = annotations[pmid][text_segment.value]["text"]
+                ents = annotations[pmid][text_segment.value]["ents"]
 
             rows = df[df[PUBLICATION_SOURCE] == f"PUBMED:{pmid}"]
 
@@ -226,6 +236,7 @@ def _align(
                         offsets.append(offset)
 
             if relations:
+                progress.update(len(relations))
                 # Sort the relations by order of first appearence
                 relations = _sort_by_offset(relations, offsets)
                 relations = " ".join(relations)
@@ -236,9 +247,8 @@ def _align(
 
             # For testing purposes, we still record the pmid even if no relations were found.
             alignments[pmid] = relations
-            progress.update(1)
 
-            if i == max_instances:
+            if len(alignments) == max_instances:
                 break
 
     return alignments
@@ -248,6 +258,9 @@ def _align(
 def test(
     input_dir=typer.Argument(..., help="Directory containing the preprocessed data"),
     ground_truth_fp: str = typer.Argument(..., help="Path on disk to the ground truth alignments"),
+    text_segment: TextSegment = typer.Option(
+        TextSegment.both, help="Whether to use title text, abstract text, or both"
+    ),
 ) -> None:
     # load the pmids, text and labels
     ground_truth = {}
@@ -266,13 +279,14 @@ def test(
     alignments = _align(
         input_dir=input_dir,
         output_fp="predictions.tsv",
+        text_segment=text_segment,
         pmid_whitelist=list(ground_truth.keys()),
     )
 
     msg.divider("Testing")
     correct, missed = 0, 0
     for pmid, relation in ground_truth.items():
-        if pmid not in alignments:
+        if not alignments.get(pmid, ""):
             missed += 1
         elif relation == alignments[pmid]:
             correct += 1
@@ -288,7 +302,7 @@ def test(
 
 @app.command()
 def preprocess(
-    output_dir=typer.Argument(..., help="Directory to save the resulting data"),
+    output_dir: Path = typer.Argument(..., help="Directory to save the resulting data"),
     biogrid_path_or_url: str = typer.Argument(
         ...,
         help="A path on disk (or URL) to a tab delineated (*.tab3) BioGRID release",
@@ -304,7 +318,7 @@ def preprocess(
     msg.divider("Preprocessing")
 
     if scispacy_model is not None:
-        nlp = _load_scipacy(scispacy_model)
+        nlp = _load_scispacy(scispacy_model)
         msg.good(f"Loaded scispacy model: {scispacy_model}")
     else:
         nlp = None
@@ -327,35 +341,33 @@ def preprocess(
     # Get all unique UniProt IDs in the dataframe, account for the compound IDs and duplicates.
     uniprot_ids = df[INTERACTOR_A_UNIPROT_ID].unique().tolist()
     uniprot_ids.extend(df[INTERACTOR_B_UNIPROT_ID].unique().tolist())
-    uniprot_ids = [_id for _ids in uniprot_ids for _id in _ids.split("|")]
+    uniprot_ids = [_id for ids in uniprot_ids for _id in ids.split("|")]
     uniprot_ids = list(set(uniprot_ids))
 
-    synonyms = {}
-    with typer.progressbar(uniprot_ids, label="Fetching UniProt synonyms") as progress:
-        for _id in progress:
-            synonyms[_id] = get_uniprot_synonyms(_id)
+    # Get synonyms for all UniProt IDs in the dataframe
+    synonyms: Synonyms = {}
+    total_results = ceil(len(uniprot_ids) / UNIPROT_IDS_PER_REQUEST)
+    with typer.progressbar(length=total_results, label="Fetching UniProt synonyms") as progress:
+        for uniprot_ids in chunked(uniprot_ids, UNIPROT_IDS_PER_REQUEST):
+            synonyms.update(get_uniprot_synonyms(uniprot_ids))
+            progress.update(1)
 
     # Get the PubTator results for all PMIDs in the dataframe
-    annotations = {}
-    # This is the number of PMIDs per request allowed by pubtators webservice.
-    # See: https://www.ncbi.nlm.nih.gov/research/pubtator/api.html for details.
-    pmids_per_request = 1000
-    total_results = ceil(len(pmids) / pmids_per_request)
+    annotations: Annotations = {}
+    total_results = ceil(len(pmids) / PMIDS_PER_REQUEST)
     with typer.progressbar(length=total_results, label="Fetching PubTator annotations") as progress:
-        for pmids_ in chunked(pmids, pmids_per_request):
+        for pmids_ in chunked(pmids, PMIDS_PER_REQUEST):
             annotation = get_pubtator_response(pmids_, concepts=["gene"])
             annotations.update(annotation)
             progress.update(1)
 
-    # If a ScispaCy model was provided, use it to extend the list of entities.
+    # If a ScispaCy model was provided, use it to extend the list of entities
     if nlp is not None:
-        # Batch the inputs for more efficient processing
-        batch_size = 100
-        num_batches = ceil(len(annotations) / batch_size)
+        num_batches = ceil(len(annotations) / SPACY_BATCH_SIZE)
         with typer.progressbar(
             length=num_batches, label="Extending annotations with ScispaCy"
         ) as progress:
-            for pmids in chunked(annotations, batch_size):
+            for pmids in chunked(annotations, SPACY_BATCH_SIZE):
                 # Downstream, we may want to compare performance when aligning to titles,
                 # abstracts or both. To keep all options open, we separately keep track of
                 # entities in the title and the abstract.
@@ -378,8 +390,11 @@ def preprocess(
     biogrid_fp = output_dir / BIOGRID_FN
 
     synonyms_fp.write_text(json.dumps(synonyms, indent=2))
+    msg.good(f"Saved synonyms file to: {synonyms_fp}")
     annotations_fp.write_text(json.dumps(annotations, indent=2))
+    msg.good(f"Saved annotations_fp file to: {annotations_fp}")
     df.to_csv(biogrid_fp, sep="\t")
+    msg.good(f"Saved preprocessed BioGRID release to: {biogrid_fp}")
 
 
 @app.command()
