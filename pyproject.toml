@@ -37,13 +37,16 @@ wasabi = "^0.8.2"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
+codecov = "^2.1.11"
+coverage = "^5.5"
 dephell = {extras = ["full"], version = "^0.8.3"}
 flake8 = "^3.8.4"
+hypothesis = "^6.9.1"
 ipykernel = "^5.4.3"
 jupyter = "^1.0.0"
 mypy = "^0.812"
 pytest = "^5.2"
-hypothesis = "^6.9.1"
+pytest-cov = "^2.11.1"
 
 [tool.poetry.scripts]
 seq2rel-ds = "seq2rel_ds.main:app"
