@@ -25,7 +25,7 @@ classifiers = [
 exclude = ["tests"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.7.1"
 datasets = "^1.2.1"
 fuzzywuzzy = "^0.18.0"
 more-itertools = "^8.7.0"
