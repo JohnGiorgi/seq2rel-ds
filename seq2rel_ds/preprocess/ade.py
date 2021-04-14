@@ -22,7 +22,7 @@ def format_adverse_drug_reaction(drug: str, effect: str) -> str:
     return f"@ADE@ {drug} @DRUG@ {effect} @EFFECT@ @EOR@"
 
 
-def unpack_line(line: DatasetLine) -> Tuple[str]:
+def unpack_line(line: DatasetLine) -> Tuple[str, str, str, str]:
     return line["text"], line["drug"], line["effect"], line["indexes"]
 
 
@@ -80,7 +80,7 @@ def preprocess_ade_v2() -> List[str]:
 
 
 @app.command(name="ade")
-def main(output_dir: str, sorting: Optional[str] = None) -> None:
+def main(output_dir: Path, sorting: Optional[str] = None) -> None:
     """Downloads and preprocesses the Adverse Drug Reaction corpus for use with seq2rel.
 
     We make several assumptions:\n
