@@ -39,12 +39,12 @@ def test_get_pubtator_response() -> None:
                     " smoke exposure increasing the anti-inflammatory effects of FP."
                 ),
                 "clusters": {
-                    "8841": {"ents": ["HDAC3"], "offsets": [(921, 926)]},
-                    "3066": {"ents": ["HDAC2"], "offsets": [(931, 936)]},
-                    "4790": {"ents": ["NF-kappaB"], "offsets": [(979, 988)]},
-                    "3576": {"ents": ["IL-8"], "offsets": [(1013, 1017)]},
-                    "7124": {"ents": ["TNF-alpha"], "offsets": [(1019, 1028)]},
-                    "3553": {"ents": ["IL-1beta"], "offsets": [(1030, 1038)]},
+                    "8841": {"ents": ["hdac3"], "offsets": [(921, 926)]},
+                    "3066": {"ents": ["hdac2"], "offsets": [(931, 936)]},
+                    "4790": {"ents": ["nf-kappab"], "offsets": [(979, 988)]},
+                    "3576": {"ents": ["il-8"], "offsets": [(1013, 1017)]},
+                    "7124": {"ents": ["tnf-alpha"], "offsets": [(1019, 1028)]},
+                    "3553": {"ents": ["il-1beta"], "offsets": [(1030, 1038)]},
                 },
             },
         }
