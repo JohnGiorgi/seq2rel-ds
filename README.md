@@ -48,7 +48,7 @@ There are two submodules:
 1. `preprocess`: used to preprocess existing datasets in a format that can be used with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
 2. `align`: used to generate training data using weak/distant supervision.
 
-### preprocess
+### `preprocess`
 
 To see the list of datasets available for preprocessing, call
 
@@ -62,7 +62,7 @@ To preprocess the data (and in some cases, download it), call one of the command
 seq2rel-ds preprocess ade "path/to/output/directory"
 ```
 
-### align
+### `align`
 
 To see the list of strategies available for creating training data via weak/distant supervision, call
 
@@ -72,10 +72,17 @@ seq2rel-ds align --help
 
 #### BioGRID
 
-To use BioGRID and distant supervision to create training data, you first need to download a BioGRID release
+To use [BioGRID](https://thebiogrid.org/) and distant supervision to create training data, you first need to download a BioGRID release in the `.tab3` format from [here](https://downloads.thebiogrid.org/BioGRID). Then, to preprocess this data, call
 
 ```
-seq2rel-ds align biogrid preprocess "path/to/output/directory" "path/to/biogrid/release"
+seq2rel-ds align biogrid preprocess "path/to/output/directory" "path/to/biogrid/release.tab3"
 ```
 
-> Note, it is strongly recommend to provide a [ScispaCy](https://allenai.github.io/scispacy/) model name with the `--scispacy-model` flag. We currently recommend the `"en_ner_jnlpba_md"` model.
+with the data preprocessed, call the following to create the training data
+
+```bash
+seq2rel-ds align biogrid "path/to/output/directory" "aligned_examples.tsv"
+```
+
+`"aligned_examples.tsv"` can then be used to train a [`seq2rel`](https://github.com/JohnGiorgi/seq2rel) model.
+
