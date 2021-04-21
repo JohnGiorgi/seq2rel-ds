@@ -11,65 +11,57 @@ except ImportError:
 
 import os.path
 
-readme = ""
+readme = ''
 here = os.path.abspath(os.path.dirname(__file__))
-readme_path = os.path.join(here, "README.rst")
+readme_path = os.path.join(here, 'README.rst')
 if os.path.exists(readme_path):
-    with open(readme_path, "rb") as stream:
-        readme = stream.read().decode("utf8")
+    with open(readme_path, 'rb') as stream:
+        readme = stream.read().decode('utf8')
 
 setup(
     long_description=readme,
-    name="seq2rel-ds",
-    version="0.1.0",
-    description="This is sister repository to seq2rel which aims to make it easy to generate training data.",
-    python_requires="==3.*,>=3.8.0",
+    name='seq2rel-ds',
+    version='0.1.0',
+    description='This is sister repository to seq2rel which aims to make it easy to generate training data.',
+    python_requires='==3.*,>=3.7.1',
     project_urls={
         "documentation": "https://github.com/JohnGiorgi/seq2rel-ds",
         "homepage": "https://github.com/JohnGiorgi/seq2rel-ds",
-        "repository": "https://github.com/JohnGiorgi/seq2rel-ds",
+        "repository": "https://github.com/JohnGiorgi/seq2rel-ds"
     },
-    author="johngiorgi",
-    author_email="johnmgiorgi@gmail.com",
-    license="Apache-2.0",
-    keywords="seq2rel seq2seq information extraction distant supervision weak supervision",
+    author='johngiorgi',
+    author_email='johnmgiorgi@gmail.com',
+    license='Apache-2.0',
+    keywords='seq2rel seq2seq information extraction distant supervision weak supervision',
     classifiers=[
-        "Development Status :: 1 - Planning",
-        "Environment :: Console",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Typing :: Typed",
+        'Development Status :: 1 - Planning', 'Environment :: Console',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Typing :: Typed'
     ],
     entry_points={"console_scripts": ["seq2rel-ds = seq2rel_ds.main:app"]},
-    packages=["seq2rel_ds", "seq2rel_ds.align", "seq2rel_ds.preprocess"],
+    packages=['seq2rel_ds', 'seq2rel_ds.align', 'seq2rel_ds.preprocess'],
     package_dir={"": "."},
     package_data={},
     install_requires=[
-        "datasets==1.*,>=1.2.1",
-        "fuzzywuzzy==0.*,>=0.18.0",
-        "joblib==1.*,>=1.0.1",
-        "more-itertools==8.*,>=8.7.0",
-        "pandas==1.*,>=1.2.1",
-        "python-levenshtein==0.*,>=0.12.2",
-        "scispacy==0.3.0",
-        "typer==0.*,>=0.3.2",
-        "wasabi==0.*,>=0.8.2",
+        'datasets==1.*,>=1.2.1', 'more-itertools==8.*,>=8.7.0',
+        'pandas==1.*,>=1.2.1', 'pydantic==1.*,>=1.8.1',
+        'scikit-learn==0.*,>=0.24.1', 'typer==0.*,>=0.3.2',
+        'wasabi==0.*,>=0.8.2'
     ],
     extras_require={
         "dev": [
-            "black==20.*,>=20.8.0.b1",
-            "dephell[full]==0.*,>=0.8.3",
-            "flake8==3.*,>=3.8.4",
-            "ipykernel==5.*,>=5.4.3",
-            "jupyter==1.*,>=1.0.0",
-            "mypy==0.*,>=0.812.0",
-            "pytest==5.*,>=5.2.0",
+            "black==20.*,>=20.8.0.b1", "codecov==2.*,>=2.1.11",
+            "coverage==5.*,>=5.5.0", "dephell[full]==0.*,>=0.8.3",
+            "flake8==3.*,>=3.8.4", "hypothesis==6.*,>=6.9.1",
+            "mypy==0.*,>=0.812.0", "pytest==5.*,>=5.2.0",
+            "pytest-cov==2.*,>=2.11.1"
         ]
     },
 )

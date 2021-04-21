@@ -6,7 +6,6 @@ from seq2rel_ds.common.util import sanitize_text
 from urllib3.util.retry import Retry
 
 # API URLs
-UNIPROT_API_URL = "https://www.uniprot.org/uploadlists/"
 PUBTATOR_API_URL = "https://www.ncbi.nlm.nih.gov/research/pubtator-api/publications/export/pubtator"
 
 # Here, we create a session globally that can be used in all requests. We add a hook that will

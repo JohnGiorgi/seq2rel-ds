@@ -2,6 +2,27 @@
 seq2rel Datasets
 ================
 
+
+.. image:: https://github.com/JohnGiorgi/seq2rel-ds/actions/workflows/ci.yml/badge.svg?branch=main
+   :target: https://github.com/JohnGiorgi/seq2rel-ds/actions/workflows/ci.yml
+   :alt: ci
+
+
+.. image:: https://codecov.io/gh/JohnGiorgi/seq2rel-ds/branch/main/graph/badge.svg?token=69PIN7H6UW
+   :target: https://codecov.io/gh/JohnGiorgi/seq2rel-ds
+   :alt: codecov
+
+
+.. image:: http://www.mypy-lang.org/static/mypy_badge.svg
+   :target: http://mypy-lang.org/
+   :alt: Checked with mypy
+
+
+.. image:: https://img.shields.io/github/license/JohnGiorgi/seq2rel?color=blue
+   :target: https://img.shields.io/github/license/JohnGiorgi/seq2rel?color=blue
+   :alt: GitHub
+
+
 This is a sister repository to `\ ``seq2rel`` <https://github.com/JohnGiorgi/seq2rel>`_ which aims to make it easy to generate training data.
 
 Installation
@@ -49,8 +70,8 @@ There are two submodules:
 #. `preprocess`: used to preprocess existing datasets in a format that can be used with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
 #. ``align``\ : used to generate training data using weak/distant supervision.
 
-preprocess
-^^^^^^^^^^
+``preprocess``
+^^^^^^^^^^^^^^^^^^
 
 To see the list of datasets available for preprocessing, call
 
@@ -64,8 +85,8 @@ To preprocess the data (and in some cases, download it), call one of the command
 
    seq2rel-ds preprocess ade "path/to/output/directory"
 
-align
-^^^^^
+``align``
+^^^^^^^^^^^^^
 
 To see the list of strategies available for creating training data via weak/distant supervision, call
 
@@ -76,13 +97,16 @@ To see the list of strategies available for creating training data via weak/dist
 BioGRID
 ~~~~~~~
 
-To use BioGRID and distant supervision to create training data, you first need to download a BioGRID release
+To use `BioGRID <https://thebiogrid.org/>`_ and distant supervision to create training data, you first need to download a BioGRID release in the ``.tab3`` format from `here <https://downloads.thebiogrid.org/BioGRID>`_. Then, to preprocess this data, call
 
 .. code-block::
 
-   seq2rel-ds align biogrid preprocess "path/to/output/directory" "path/to/biogrid/release"
+   seq2rel-ds align biogrid preprocess "path/to/output/directory" "path/to/biogrid/release.tab3"
 
-..
+with the data preprocessed, call the following to create the training data
 
-   Note, it is strongly recommend to provide a `ScispaCy <https://allenai.github.io/scispacy/>`_ model name with the ``--scispacy-model`` flag. We currently recommend the ``"en_ner_jnlpba_md"`` model.
+.. code-block:: bash
 
+   seq2rel-ds align biogrid "path/to/output/directory" "aligned_examples.tsv"
+
+``"aligned_examples.tsv"`` can then be used to train a `\ ``seq2rel`` <https://github.com/JohnGiorgi/seq2rel>`_ model.
