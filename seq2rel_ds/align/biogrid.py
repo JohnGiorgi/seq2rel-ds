@@ -14,20 +14,9 @@ from seq2rel_ds import msg
 from seq2rel_ds.align.util import get_pubtator_response
 from seq2rel_ds.common.util import sanitize_text, set_seeds
 from spacy.tokens.doc import Doc
+from seq2rel_ds.align.schemas import AlignedExample
 
 app = typer.Typer(callback=set_seeds)
-
-
-# List of problems:
-# - Multiple examples per pmid (should be one)
-# - Sorting by order of first apperance
-# - Make a test set
-# - Relations with the same entities
-# - Duplicates
-# - unclosed paranthases
-# - entities aren't marked here!
-# - include pubtator relations?
-# - use pubtator for retrieving text as well?
 
 
 ENTREZGENE_INTERACTOR_A = "Entrez Gene Interactor A"
@@ -127,7 +116,7 @@ def _align(
     text_segment: TextSegment = TextSegment.both,
     max_instances: Optional[int] = None,
     pmid_whitelist: Optional[List[str]] = None,
-) -> Dict[str, List[str]]:
+) -> Dict[str, AlignedExample]:
     msg.divider("Alignment")
 
     # TODO: Should check if input_dir exists, raising an error if not. Can we do that
@@ -172,9 +161,6 @@ def _align(
             relations = []
             offsets = []
             for _, row in rows.iterrows():
-                # TODO: In the future, it might be nice to try and distinguish between genetic and
-                # physical interactions. For now, we group them into one category.
-                # rel_type = row[EXPERIMENTAL_SYSTEM_TYPE]
                 rel_type = row[EXPERIMENTAL_SYSTEM_TYPE]
                 interactor_a = clusters.get(row[ENTREZGENE_INTERACTOR_A], [])
                 interactor_b = clusters.get(row[ENTREZGENE_INTERACTOR_B], [])
@@ -200,15 +186,19 @@ def _align(
             if relations:
                 # Sort the relations by order of first appearence
                 relations = _sort_by_offset(relations, offsets)
-                relations = " ".join(relations)
-                annotation = f"{text}\t{relations}"
+                # Score the alignment as the fraction of BioGRID interactions we found
+                score = len(relations) / len(rows)
+
+                aligned_example = AlignedExample(
+                    doc_id=pmid, text=text, relations=" ".join(relations), score=score
+                )
                 if output_fp is not None:
                     with open(output_fp, "a") as f:
-                        f.write(f"{annotation}\n")
+                        f.write(f"{aligned_example.json()}\n")
                 progress.update(1)
 
                 # TODO: This leads to empty entries during testing. Come up with a solution.
-                alignments[pmid] = relations
+                alignments[pmid] = aligned_example
 
             if len(alignments) == max_instances:
                 break
@@ -281,7 +271,8 @@ def preprocess(
     # Filter anything without a PMID
     df = df[df[PUBLICATION_SOURCE].str.contains("PUBMED")]
     num_records = len(df)
-    # Remove duplicates as these cause problems downstream. Not sure why these exist to begin with.
+    # Remove duplicates as these cause problems downstream. Often, these are
+    # the same interaction identified by different experimental systems.
     df = df.drop_duplicates()
     msg.info(f"Dropped {num_records - len(df)} ({1 - len(df)/num_records:.2%}) duplicates")
     # Get all unique PMIDs in the dataframe.
@@ -314,7 +305,7 @@ def main(
         TextSegment.both, help="Whether to use title text, abstract text, or both"
     ),
     max_instances: int = typer.Option(
-        None, help="The maximum number of PMIDs to produce alignments for"
+        None, help="The maximum number of PMIDs to produce alignments for."
     ),
 ) -> None:
     """Creates training data for distantly supervised relation extraction by aligning BioGRID
