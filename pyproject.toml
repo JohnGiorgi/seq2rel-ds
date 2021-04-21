@@ -27,11 +27,8 @@ exclude = ["tests"]
 [tool.poetry.dependencies]
 python = "^3.7.1"
 datasets = "^1.2.1"
-fuzzywuzzy = "^0.18.0"
 more-itertools = "^8.7.0"
 pandas = "^1.2.1"
-python-Levenshtein = "^0.12.2"
-scispacy = "0.3.0"
 typer = "^0.3.2"
 wasabi = "^0.8.2"
 pydantic = "^1.8.1"
