@@ -33,9 +33,6 @@ END_OF_REL_SYMBOL = "@EOR@"
 ANNOTATIONS_FN = "annotations.json"
 BIOGRID_FN = "biogrid.tsv"
 
-# UniProt docs suggest that requests should contain <20000 identifiers
-# See: https://www.uniprot.org/help/uploadlists
-UNIPROT_IDS_PER_REQUEST = 1000
 # This is the number of PMIDs per request allowed by pubtators webservice.
 # See: https://www.ncbi.nlm.nih.gov/research/pubtator/api.html for details.
 PMIDS_PER_REQUEST = 1000
