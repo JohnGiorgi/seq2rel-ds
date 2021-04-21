@@ -7,13 +7,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import pandas as pd
-import spacy
 import typer
 from more_itertools import chunked
 from seq2rel_ds import msg
 from seq2rel_ds.align.util import get_pubtator_response
 from seq2rel_ds.common.util import sanitize_text, set_seeds
-from spacy.tokens.doc import Doc
 from seq2rel_ds.align.schemas import AlignedExample
 
 app = typer.Typer(callback=set_seeds)
@@ -44,39 +42,6 @@ class TextSegment(str, Enum):
     both = "both"
 
 
-def _load_scispacy(model: str):
-    # We don't need the tagger or parser. Disabling them will speed up processing.
-    try:
-        nlp = spacy.load(model, disable=["tagger", "parser"])
-    except OSError:
-        msg.fail(
-            (
-                f'ScispaCy model "{model}" not found. Make sure this is a valid ScispaCy'
-                " model (https://allenai.github.io/scispacy/) and it has been installed."
-            )
-        )
-        raise typer.Exit(code=1)
-    # The AbbreviationDetector is very important for good alignment quality.
-    try:
-        from scispacy.abbreviation import AbbreviationDetector
-
-        abbreviation_pipe = AbbreviationDetector(nlp)
-        nlp.add_pipe(abbreviation_pipe)
-    except ImportError:
-        msg.warning(
-            (
-                "Could not import the ScispaCy AbbreviationDetector. This will"
-                " negatively impact the quality of alignments"
-            )
-        )
-    return nlp
-
-
-def _load_biogrid(biogrid_path_or_url: str) -> pd.DataFrame:
-    df = pd.read_csv(biogrid_path_or_url, sep="\t", usecols=BIOGRID_COLS.keys(), dtype=BIOGRID_COLS)
-    return df
-
-
 def _format_rel(interactor_a: List[str], interactor_b: List[str], rel_type: str) -> str:
     return (
         f"@{rel_type.strip().upper()}@"
@@ -86,25 +51,16 @@ def _format_rel(interactor_a: List[str], interactor_b: List[str], rel_type: str)
     )
 
 
-def _get_entities(doc: Doc) -> List[str]:
-    # Use spaCy to extract entities
-    entities = []
-    for ent in doc.ents:
-        entities.append(ent.text)
-    # Attempt to include full mentions of an entitiy, including its abbreviation.
-    try:
-        for abrv in doc._.abbreviations:
-            entities.append(f"{abrv._.long_form.text} ({abrv.text})")
-    except AttributeError:
-        pass
-    return entities
-
-
 def _sort_by_offset(items: List[str], offsets: List[int], **kwargs) -> List[str]:
     packed = list(zip(items, offsets))
     packed = sorted(packed, key=itemgetter(1), **kwargs)
     sorted_items, _ = list(zip(*packed))
     return sorted_items
+
+
+def _load_biogrid(biogrid_path_or_url: str) -> pd.DataFrame:
+    df = pd.read_csv(biogrid_path_or_url, sep="\t", usecols=BIOGRID_COLS.keys(), dtype=BIOGRID_COLS)
+    return df
 
 
 def _align(

@@ -2,10 +2,7 @@ import random
 from typing import Any, Iterable, List, Tuple
 
 import numpy as np
-
-from fuzzywuzzy import process
 from sklearn.model_selection import train_test_split
-
 
 SEED = 13370
 NUMPY_SEED = 1337
@@ -22,28 +19,6 @@ def sanitize_text(text: str, lowercase: bool = False) -> str:
     sanitized_text = " ".join(text.strip().split())
     sanitized_text = sanitized_text.lower() if lowercase else sanitized_text
     return sanitized_text
-
-
-def fuzzy_match(
-    queries: List[str], choices: List[str], return_longest: bool = True, **kwargs: Any
-) -> str:
-    """Returns the best fuzzy match from `choices` given `queries`. If `return_longest`, returns the
-    longest best string match. Optional **kwargs are passed to `fuzzywuzzy.process.extractBests`.
-    """
-    best_match = ""
-    fuzzy_matches = []
-    for query in queries:
-        # BioGRID uses "-" to denote empty values (e.g. no synonyms) causing fuzzywuzzy
-        # to complain. Skip these values to prevent the warning from cluttering our output.
-        if query == "-":
-            continue
-        fuzzy_matches.extend(process.extractBests(query, choices, **kwargs))
-    if fuzzy_matches:
-        if return_longest:
-            best_match = max(fuzzy_matches, key=lambda x: len(x[0]))[0]
-        else:
-            best_match = fuzzy_matches[0][0]
-    return best_match
 
 
 def train_valid_test_split(
