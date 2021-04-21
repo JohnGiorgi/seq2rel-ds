@@ -48,17 +48,15 @@ def fuzzy_match(
 
 def train_valid_test_split(
     data: Iterable[Any],
-    train_size: int = 0.7,
-    valid_size: int = 0.1,
-    test_size: int = 0.2,
+    train_size: float = 0.7,
+    valid_size: float = 0.1,
+    test_size: float = 0.2,
     **kwargs: Any,
 ) -> Tuple[List[Any], List[Any], List[Any]]:
     """Given an iterable (`data`), returns train, valid and test partitions of size `train_size`,
     `valid_size` and `test_size`. Optional kwargs are passed to `sklearn.model_selection.train_test_split`
     """
     # https://datascience.stackexchange.com/a/53161
-    X_train, X_test = train_test_split(data, test_size=1 - train_size, **kwargs)
-    X_valid, X_test = train_test_split(
-        X_test, test_size=test_size / (test_size + valid_size), **kwargs
-    )
-    return X_train, X_valid, X_test
+    train, test = train_test_split(data, test_size=1 - train_size, **kwargs)
+    valid, test = train_test_split(test, test_size=test_size / (test_size + valid_size), **kwargs)
+    return train, valid, test
