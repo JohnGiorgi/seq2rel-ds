@@ -113,7 +113,7 @@ def _sort_by_offset(items: List[str], offsets: List[int], **kwargs) -> List[str]
 def _align(
     input_dir: Path,
     output_fp: Optional[Path] = None,
-    text_segment: TextSegment = TextSegment.both,
+    text_segment: TextSegment = TextSegment.abstract,
     max_instances: Optional[int] = None,
     pmid_whitelist: Optional[List[str]] = None,
 ) -> Dict[str, AlignedExample]:
@@ -211,7 +211,7 @@ def test(
     input_dir=typer.Argument(..., help="Directory containing the preprocessed data"),
     ground_truth_fp: str = typer.Argument(..., help="Path on disk to the ground truth alignments"),
     text_segment: TextSegment = typer.Option(
-        TextSegment.both, help="Whether to use title text, abstract text, or both"
+        TextSegment.abstract, help="Whether to use title text, abstract text, or both"
     ),
 ) -> None:
     # load the pmids, text and labels
@@ -302,7 +302,7 @@ def main(
     input_dir: str = typer.Argument(..., help="Directory containing the preprocessed data"),
     output_dir: str = typer.Argument(..., help="Directory to save the resulting data"),
     text_segment: TextSegment = typer.Option(
-        TextSegment.both, help="Whether to use title text, abstract text, or both"
+        TextSegment.abstract, help="Whether to use title text, abstract text, or both"
     ),
     max_instances: int = typer.Option(
         None, help="The maximum number of PMIDs to produce alignments for."
