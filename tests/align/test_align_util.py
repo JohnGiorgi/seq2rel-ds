@@ -1,54 +1,93 @@
 from seq2rel_ds.align import util
+from seq2rel_ds.common import schemas
 
 
-def test_get_pubtator_response() -> None:
-    pmid = "28483577"
-    expected = {
-        pmid: {
-            "title": {
-                "text": (
-                    "Formoterol and fluticasone propionate combination improves histone"
-                    " deacetylation and anti-inflammatory activities in bronchial epithelial cells"
-                    " exposed to cigarette smoke."
-                ),
-                "clusters": {},
-            },
-            "abstract": {
-                "text": (
-                    "BACKGROUND: The addition of long-acting beta2-agonists (LABAs) to"
-                    " corticosteroids improves asthma control. Cigarette smoke exposure, increasing"
-                    " oxidative stress, may negatively affect corticosteroid responses."
-                    " The anti-inflammatory effects of formoterol (FO) and fluticasone propionate (FP)"
-                    " in human bronchial epithelial cells exposed to cigarette smoke extracts (CSE) are"
-                    " unknown. AIMS: This study explored whether FP, alone and in combination with FO,"
-                    " in human bronchial epithelial cellline (16-HBE) and primary bronchial epithelial"
-                    " cells (NHBE), counteracted some CSE-mediated effects and in particular some of the"
-                    " molecular mechanisms of corticosteroid resistance. METHODS: 16-HBE and NHBE were"
-                    " stimulated with CSE, FP and FO alone or combined. HDAC3 and HDAC2 activity, nuclear"
-                    " translocation of GR and NF-kappaB, pERK1/2/tERK1/2 ratio, IL-8, TNF-alpha,"
-                    " IL-1beta mRNA expression, and mitochondrial ROS were evaluated. Actin reorganization"
-                    " in neutrophils was assessed by fluorescence microscopy using the phalloidin method."
-                    " RESULTS: In 16-HBE, CSE decreased expression/activity of HDAC3, activity of HDAC2,"
-                    " nuclear translocation of GR and increased nuclear NF-kappaB expression, pERK 1/2/tERK1/2"
-                    " ratio, and mRNA expression of inflammatory cytokines. In NHBE, CSE increased mRNA"
-                    " expression of inflammatory cytokines and supernatants from CSE exposed NHBE increased"
-                    " actin reorganization in neutrophils. FP combined with FO reverted all these phenomena"
-                    " in CSE stimulated 16-HBE cells as well as in NHBE cells. CONCLUSIONS: The present"
-                    " study provides compelling evidences that FP combined with FO may contribute to revert"
-                    " some processes related to steroid resistance induced by oxidative stress due to cigarette"
-                    " smoke exposure increasing the anti-inflammatory effects of FP."
-                ),
-                "clusters": {
-                    "8841": {"ents": ["hdac3"], "offsets": [(921, 926)]},
-                    "3066": {"ents": ["hdac2"], "offsets": [(931, 936)]},
-                    "4790": {"ents": ["nf-kappab"], "offsets": [(979, 988)]},
-                    "3576": {"ents": ["il-8"], "offsets": [(1013, 1017)]},
-                    "7124": {"ents": ["tnf-alpha"], "offsets": [(1019, 1028)]},
-                    "3553": {"ents": ["il-1beta"], "offsets": [(1030, 1038)]},
-                },
-            },
-        }
+def test_query_pubtator() -> None:
+    pmid = "19285439"
+    title_text = (
+        "The ubiquitin ligase RNF5 regulates antiviral responses by mediating degradation"
+        " of the adaptor protein MITA."
+    )
+    abstract_text = (
+        "Viral infection activates transcription factors NF-kappaB and IRF3, which collaborate to"
+        " induce type I interferons (IFNs) and elicit innate antiviral response. MITA (also known"
+        " as STING) has recently been identified as an adaptor that links virus-sensing receptors"
+        " to IRF3 activation. Here, we showed that the E3 ubiquitin ligase RNF5 interacted with"
+        " MITA in a viral-infection-dependent manner. Overexpression of RNF5 inhibited"
+        " virus-triggered IRF3 activation, IFNB1 expression, and cellular antiviral response,"
+        " whereas knockdown of RNF5 had opposite effects. RNF5 targeted MITA at Lys150 for"
+        " ubiquitination and degradation after viral infection. Both MITA and RNF5 were located at"
+        " the mitochondria and endoplasmic reticulum (ER) and viral infection caused their"
+        " redistribution to the ER and mitochondria, respectively. We further found that"
+        " virus-induced ubiquitination and degradation of MITA by RNF5 occurred at the"
+        " mitochondria. These findings suggest that RNF5 negatively regulates virus-triggered"
+        " signaling by targeting MITA for ubiquitination and degradation at the mitochondria."
+    )
+    title_clusters = {
+        "6048": schemas.PubtatorCluster(ents=["rnf5"], offsets=[(21, 25)], label="Gene"),
+        "340061": schemas.PubtatorCluster(ents=["mita"], offsets=[(104, 108)], label="Gene"),
+    }
+    abstract_clusters = {
+        "4790": schemas.PubtatorCluster(ents=["nf-kappab"], offsets=[(158, 167)], label="Gene"),
+        "3661": schemas.PubtatorCluster(ents=["irf3"], offsets=[(172, 176)], label="Gene"),
+        "340061": schemas.PubtatorCluster(
+            ents=["mita", "sting"], offsets=[(270, 274), (290, 295)], label="Gene"
+        ),
+        "6048": schemas.PubtatorCluster(ents=["rnf5"], offsets=[(440, 444)], label="Gene"),
+        "3456": schemas.PubtatorCluster(ents=["ifnb1"], offsets=[(571, 576)], label="Gene"),
+    }
+    both_clusters = {
+        "6048": schemas.PubtatorCluster(ents=["rnf5"], offsets=[(21, 25)], label="Gene"),
+        "340061": schemas.PubtatorCluster(
+            ents=["mita", "sting"], offsets=[(104, 108), (290, 295)], label="Gene"
+        ),
+        "4790": schemas.PubtatorCluster(ents=["nf-kappab"], offsets=[(158, 167)], label="Gene"),
+        "3661": schemas.PubtatorCluster(ents=["irf3"], offsets=[(172, 176)], label="Gene"),
+        "3456": schemas.PubtatorCluster(ents=["ifnb1"], offsets=[(571, 576)], label="Gene"),
     }
 
-    actual = util.get_pubtator_response(pmids=[pmid], concepts=["gene"])
-    assert actual == expected
+    # Title only
+    expected = {
+        pmid: schemas.PubtatorAnnotation(
+            text=title_text,
+            clusters=title_clusters,
+            relations=[],
+        ),
+    }
+    actual = util.query_pubtator(
+        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.title
+    )
+    # Breaking up the asserts leads to much clearer outputs when the test fails
+    assert actual[pmid].text == expected[pmid].text
+    assert actual[pmid].clusters == expected[pmid].clusters
+    assert actual[pmid].relations == expected[pmid].relations
+
+    # Abstract only
+    expected = {
+        pmid: schemas.PubtatorAnnotation(
+            text=abstract_text,
+            clusters=abstract_clusters,
+            relations=[],
+        ),
+    }
+    actual = util.query_pubtator(
+        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.abstract
+    )
+    assert actual[pmid].text == expected[pmid].text
+    assert actual[pmid].clusters == expected[pmid].clusters
+    assert actual[pmid].relations == expected[pmid].relations
+
+    # Both
+    expected = {
+        pmid: schemas.PubtatorAnnotation(
+            text=f"{title_text} {abstract_text}",
+            clusters=both_clusters,
+            relations=[],
+        ),
+    }
+    actual = util.query_pubtator(
+        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.both
+    )
+    assert actual[pmid].text == expected[pmid].text
+    assert actual[pmid].clusters == expected[pmid].clusters
+    assert actual[pmid].relations == expected[pmid].relations
