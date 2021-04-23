@@ -1,3 +1,4 @@
+import random
 import re
 
 import numpy as np
@@ -52,13 +53,24 @@ def test_sort_by_offset_raise_value_error() -> None:
         _ = util.sort_by_offset(items, offsets)
 
 
+def test_train_valid_test_split():
+    data = random.sample(range(0, 100), 10)
+    train_size, valid_size, test_size = 0.7, 0.1, 0.2
+    train, valid, test = util.train_valid_test_split(
+        data, train_size=train_size, valid_size=valid_size, test_size=test_size
+    )
+    assert len(train) == int(train_size * len(data))
+    assert len(valid) == int(valid_size * len(data))
+    assert len(test) == int(test_size * len(data))
+
+
 def test_format_relation() -> None:
     # Add trailing and leading spaces throughout to ensure they are handled.
     rel_label = "Interaction "
     ent_clusters = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
-    ent_labels = ["PRGE", " PRGE", "PRGE "]
+    ent_labels = ["GGP", " GGP", "GGP "]
     expected = (
-        f"@INTERACTION@ mita ; sting @PRGE@ nf-kappab @PRGE@ irf3 @PRGE@ {util.END_OF_REL_SYMBOL}"
+        f"@INTERACTION@ mita ; sting @GGP@ nf-kappab @GGP@ irf3 @GGP@ {util.END_OF_REL_SYMBOL}"
     )
     actual = util.format_relation(
         ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
