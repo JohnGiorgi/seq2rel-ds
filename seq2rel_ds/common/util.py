@@ -52,9 +52,11 @@ def train_valid_test_split(
 ) -> Tuple[List[Any], List[Any], List[Any]]:
     """Given an iterable (`data`), returns train, valid and test partitions of size `train_size`,
     `valid_size` and `test_size`. Optional kwargs are passed to `sklearn.model_selection.train_test_split`
+
+    See https://datascience.stackexchange.com/a/53161 for details.
     """
-    # https://datascience.stackexchange.com/a/53161
-    train, test = train_test_split(data, test_size=1 - train_size, **kwargs)
+    # Round to avoid precision errors.
+    train, test = train_test_split(data, test_size=round(1 - train_size, 4), **kwargs)
     valid, test = train_test_split(test, test_size=test_size / (test_size + valid_size), **kwargs)
     return train, valid, test
 
