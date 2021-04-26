@@ -1,5 +1,10 @@
-from seq2rel_ds.preprocess import bc5cdr
+from pathlib import Path
+
 from seq2rel_ds.common.testing import Seq2RelDSTestCase
+from seq2rel_ds.preprocess import bc5cdr
+from typer.testing import CliRunner
+
+runner = CliRunner()
 
 
 class TestBC5CDR(Seq2RelDSTestCase):
@@ -86,18 +91,21 @@ class TestBC5CDR(Seq2RelDSTestCase):
         actual = bc5cdr._preprocess_bc5cdr(self.test_path)
         assert actual == self.test
 
-    def test_bc5cdr_command(self, tmp_path) -> None:
-        """This is effectively an integration test."""
-        bc5cdr.main(input_dir=self.data_dir, output_dir=tmp_path)
+    def test_bc5cdr_command(self, tmp_path: Path) -> None:
+
+        input_dir = str(self.data_dir)
+        output_dir = str(tmp_path)
+        result = runner.invoke(bc5cdr.app, [input_dir, output_dir])
+        assert result.exit_code == 0
 
         # training data
         actual = (tmp_path / "train.tsv").read_text().strip().split("\n")
         assert actual == self.train
 
         # validation data
-        actual = (tmp_path / "train.tsv").read_text().strip().split("\n")
-        assert actual == self.train
+        actual = (tmp_path / "valid.tsv").read_text().strip().split("\n")
+        assert actual == self.valid
 
         # test data
-        actual = (tmp_path / "train.tsv").read_text().strip().split("\n")
-        assert actual == self.train
+        actual = (tmp_path / "test.tsv").read_text().strip().split("\n")
+        assert actual == self.test
