@@ -44,9 +44,7 @@ jobs:
       - name: Test with pytest
         run: |
           poetry run pytest tests --cov-report=xml --cov ./seq2rel_ds --cov-config=.coveragerc
-      - name: Upload coverage to CodeClimate
-        # We don't want to push coverge for every job in the matrix.
-        # Rather arbitrarily, choose to push on Ubuntu with Python 3.7.
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1.3.2
         with:
           file: ./coverage.xml
