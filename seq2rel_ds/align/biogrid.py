@@ -14,11 +14,10 @@ from seq2rel_ds.common.util import (
     TextSegment,
     format_relation,
     sanitize_text,
-    set_seeds,
     sort_by_offset,
 )
 
-app = typer.Typer(callback=set_seeds)
+app = typer.Typer()
 
 
 ENTREZGENE_INTERACTOR_A = "Entrez Gene Interactor A"

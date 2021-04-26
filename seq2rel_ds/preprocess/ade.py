@@ -4,18 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import typer
 from datasets import load_dataset
-from seq2rel_ds.common.util import set_seeds, train_valid_test_split
+from seq2rel_ds.common.util import train_valid_test_split
 
 DatasetLine = Dict[str, Any]
 
-app = typer.Typer(
-    callback=set_seeds,
-    name="ade",
-    help=(
-        "Downloads and caches the ADE V2 Corpus from HuggingFace Datasets and preprocesses it for"
-        "use with seq2rel. See https://oro.open.ac.uk/48109/ for more details on the corpus."
-    ),
-)
+app = typer.Typer()
 
 
 def format_adverse_drug_reaction(drug: str, effect: str) -> str:
@@ -79,15 +72,9 @@ def preprocess_ade_v2() -> List[str]:
     return processed_examples
 
 
-@app.command(name="ade")
+@app.callback(invoke_without_command=True)
 def main(output_dir: Path, sorting: Optional[str] = None) -> None:
-    """Downloads and preprocesses the Adverse Drug Reaction corpus for use with seq2rel.
-
-    We make several assumptions:\n
-        - If a sentence is labelled for the same relation more than once, we retain only one annotation.\n
-        - Some entries do not contain entity offsets. In this case, we use the first appearence of\n
-        the entity in the text to determine its offset.
-    """
+    """Download and preprocess the ADE V2 corpus for use with seq2rel."""
     dataset = preprocess_ade_v2()
     train, valid, test = train_valid_test_split(dataset)
 
