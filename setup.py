@@ -46,12 +46,15 @@ setup(
         'Typing :: Typed'
     ],
     entry_points={"console_scripts": ["seq2rel-ds = seq2rel_ds.main:app"]},
-    packages=['seq2rel_ds', 'seq2rel_ds.align', 'seq2rel_ds.preprocess'],
+    packages=[
+        'seq2rel_ds', 'seq2rel_ds.align', 'seq2rel_ds.common.testing',
+        'seq2rel_ds.preprocess'
+    ],
     package_dir={"": "."},
     package_data={},
     install_requires=[
         'datasets==1.*,>=1.2.1', 'more-itertools==8.*,>=8.7.0',
-        'pandas==1.*,>=1.2.1', 'pydantic==1.*,>=1.8.1',
+        'pandas==1.*,>=1.2.1', 'pyarrow<4.0.0', 'pydantic==1.*,>=1.8.1',
         'scikit-learn==0.*,>=0.24.1', 'typer==0.*,>=0.3.2',
         'wasabi==0.*,>=0.8.2'
     ],
