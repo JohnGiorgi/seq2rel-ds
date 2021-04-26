@@ -51,12 +51,7 @@ def main(
     input_dir: Path = typer.Argument(..., help="Path to a local copy of the BC5CDR corpus."),
     output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
 ) -> None:
-    """Given a path to a local copy of the BC5CDR corpus (`input_dir`), saves a preprocessed copy
-    of the data to `output_dir` that can be used to train a model with the seq2rel package.
-
-    See https://github.com/JohnGiorgi/seq2rel for more details on the seq2rel package and
-    https://pubmed.ncbi.nlm.nih.gov/27161011/ for more details on the BC5CDR corpus.
-    """
+    """Preprocess a local copy of the BC5CDR corpus for use with seq2rel."""
     train_filepath = Path(input_dir) / TRAIN_FILENAME
     dev_filepath = Path(input_dir) / VALID_FILENAME
     test_filepath = Path(input_dir) / TEST_FILENAME
