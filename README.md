@@ -46,7 +46,7 @@ poetry install
 There are two submodules:
 
 1. `preprocess`: used to preprocess existing datasets in a format that can be used with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
-2. `align`: used to generate training data using weak/distant supervision.
+2. `align`: used to generate data for distantly supervised learning with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
 
 ### `preprocess`
 
