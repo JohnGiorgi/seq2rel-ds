@@ -228,7 +228,7 @@ def preprocess(
     msg.good(f"Saved preprocessed BioGRID release to: {biogrid_fp}")
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def main(
     input_dir: str = typer.Argument(..., help="Directory containing the preprocessed data"),
     output_dir: str = typer.Argument(..., help="Directory to save the resulting data"),
@@ -236,8 +236,7 @@ def main(
         None, help="The maximum number of PMIDs to produce alignments for."
     ),
 ) -> None:
-    """Creates training data for distantly supervised relation extraction by aligning BioGRID
-    records to the PubMed articles they were curated from.
+    """Use BioGRID to create data for distantly supervised learning with seq2rel.
     """
 
     _align(
