@@ -22,9 +22,11 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-exclude = ["tests"]
+exclude = ["tests", "test_fixtures"]
 
 [tool.poetry.dependencies]
+# Have to pin this to avoid errors reported by poetry
+pyarrow = "<4.0.0"
 python = "^3.7.1"
 datasets = "^1.2.1"
 more-itertools = "^8.7.0"

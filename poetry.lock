@@ -177,7 +177,7 @@ toml = ["toml"]
 
 [[package]]
 name = "datasets"
-version = "1.6.0"
+version = "1.6.1"
 description = "HuggingFace/Datasets is an open library of NLP datasets."
 category = "main"
 optional = false
@@ -200,13 +200,13 @@ xxhash = "*"
 [package.extras]
 apache-beam = ["apache-beam (>=2.26.0)"]
 benchmarks = ["numpy (==1.18.5)", "tensorflow (==2.3.0)", "torch (==1.6.0)", "transformers (==3.0.2)"]
-dev = ["absl-py", "pytest", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore (==1.2.2)", "boto3 (==1.16.43)", "botocore (==1.19.52)", "faiss-cpu", "fsspec", "moto[s3,server] (==2.0.4)", "rarfile (>=4.0)", "s3fs", "tensorflow (>=2.3)", "torch", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "sklearn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "wget (>=3.2)", "pytorch-nlp (==0.5.0)", "pytorch-lightning", "fastBPE (==0.1.0)", "fairseq", "black", "isort", "flake8 (==3.7.9)"]
+dev = ["absl-py", "pytest", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore (==1.2.2)", "boto3 (==1.16.43)", "botocore (==1.19.52)", "faiss-cpu", "fsspec", "moto[s3,server] (==2.0.4)", "rarfile (>=4.0)", "s3fs", "tensorflow (>=2.3)", "torch", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "sklearn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "wget (>=3.2)", "pytorch-nlp (==0.5.0)", "pytorch-lightning", "fastBPE (==0.1.0)", "fairseq", "black (==21.4b0)", "flake8 (==3.7.9)", "isort", "pyyaml (>=5.3.1)", "importlib-resources"]
 docs = ["docutils (==0.16.0)", "recommonmark", "sphinx (==3.1.2)", "sphinx-markdown-tables", "sphinx-rtd-theme (==0.4.3)", "sphinxext-opengraph (==0.4.1)", "sphinx-copybutton", "fsspec", "s3fs"]
-quality = ["black", "isort", "flake8 (==3.7.9)"]
+quality = ["black (==21.4b0)", "flake8 (==3.7.9)", "isort", "pyyaml (>=5.3.1)"]
 s3 = ["fsspec", "boto3 (==1.16.43)", "botocore (==1.19.52)", "s3fs"]
 tensorflow = ["tensorflow (>=2.2.0)"]
 tensorflow_gpu = ["tensorflow-gpu (>=2.2.0)"]
-tests = ["absl-py", "pytest", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore (==1.2.2)", "boto3 (==1.16.43)", "botocore (==1.19.52)", "faiss-cpu", "fsspec", "moto[s3,server] (==2.0.4)", "rarfile (>=4.0)", "s3fs", "tensorflow (>=2.3)", "torch", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "sklearn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "wget (>=3.2)", "pytorch-nlp (==0.5.0)", "pytorch-lightning", "fastBPE (==0.1.0)", "fairseq"]
+tests = ["absl-py", "pytest", "pytest-xdist", "apache-beam (>=2.26.0)", "elasticsearch", "aiobotocore (==1.2.2)", "boto3 (==1.16.43)", "botocore (==1.19.52)", "faiss-cpu", "fsspec", "moto[s3,server] (==2.0.4)", "rarfile (>=4.0)", "s3fs", "tensorflow (>=2.3)", "torch", "transformers", "bs4", "conllu", "langdetect", "lxml", "mwparserfromhell", "nltk", "openpyxl", "py7zr", "tldextract", "zstandard", "bert-score (>=0.3.6)", "rouge-score", "sacrebleu", "scipy", "seqeval", "sklearn", "jiwer", "sentencepiece", "toml (>=0.10.1)", "requests-file (>=1.5.1)", "tldextract (>=3.1.0)", "texttable (>=1.6.3)", "Werkzeug (>=1.0.1)", "wget (>=3.2)", "pytorch-nlp (==0.5.0)", "pytorch-lightning", "fastBPE (==0.1.0)", "fairseq", "importlib-resources"]
 torch = ["torch"]
 
 [[package]]
@@ -573,7 +573,7 @@ testing = ["pytest"]
 
 [[package]]
 name = "hypothesis"
-version = "6.10.0"
+version = "6.10.1"
 description = "A library for property-based testing"
 category = "dev"
 optional = false
@@ -584,7 +584,7 @@ attrs = ">=19.2.0"
 sortedcontainers = ">=2.1.0,<3.0.0"
 
 [package.extras]
-all = ["black (>=19.10b0)", "click (>=7.0)", "django (>=2.2)", "dpcontracts (>=0.4)", "lark-parser (>=0.6.5)", "libcst (>=0.3.16)", "numpy (>=1.9.0)", "pandas (>=0.25)", "pytest (>=4.6)", "python-dateutil (>=1.4)", "pytz (>=2014.1)", "redis (>=3.0.0)", "rich (>=9.0.0)", "importlib-resources (>=3.3.0)", "importlib-metadata", "backports.zoneinfo (>=0.2.1)", "tzdata (>=2020.4)"]
+all = ["black (>=19.10b0)", "click (>=7.0)", "django (>=2.2)", "dpcontracts (>=0.4)", "lark-parser (>=0.6.5)", "libcst (>=0.3.16)", "numpy (>=1.9.0)", "pandas (>=0.25)", "pytest (>=4.6)", "python-dateutil (>=1.4)", "pytz (>=2014.1)", "redis (>=3.0.0)", "rich (>=9.0.0)", "importlib-resources (>=3.3.0)", "importlib-metadata (>=3.6)", "backports.zoneinfo (>=0.2.1)", "tzdata (>=2020.4)"]
 cli = ["click (>=7.0)", "black (>=19.10b0)", "rich (>=9.0.0)"]
 codemods = ["libcst (>=0.3.16)"]
 dateutil = ["python-dateutil (>=1.4)"]
@@ -1249,7 +1249,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1"
-content-hash = "de3b364d2bdad21df2aab8a31bcebdccf2e55c20b8a93c1e19da954247d13e49"
+content-hash = "c905cf3f85f4f59e82702b8f375b7eefbc15b6b3baec31de74c17ffefaa8d917"
 
 [metadata.files]
 aiofiles = [
@@ -1402,8 +1402,8 @@ coverage = [
     {file = "coverage-5.5.tar.gz", hash = "sha256:ebe78fe9a0e874362175b02371bdfbee64d8edc42a044253ddf4ee7d3c15212c"},
 ]
 datasets = [
-    {file = "datasets-1.6.0-py3-none-any.whl", hash = "sha256:aa451d915aef63ea87de43f4f42f8ef8655a3d4928581a37e78bf858c73df500"},
-    {file = "datasets-1.6.0.tar.gz", hash = "sha256:086a92972a6a33526fcd94f3ecdc3bc7df9d24ec99c64928479220b061a607dd"},
+    {file = "datasets-1.6.1-py3-none-any.whl", hash = "sha256:f810d3fdbf8a21b000d635d4b0ea3b5252b24c86d0e26fcd9d7c2251dd871c31"},
+    {file = "datasets-1.6.1.tar.gz", hash = "sha256:24d4888c54620aa12200ce405f1ead24b3b20b66b9d815fe1947bed371b8af2e"},
 ]
 dephell = [
     {file = "dephell-0.8.3-py3-none-any.whl", hash = "sha256:3ca3661e2a353b5c67c77034b69b379e360d4c70ce562e8161db32d39064be5a"},
@@ -1505,8 +1505,8 @@ huggingface-hub = [
     {file = "huggingface_hub-0.0.8.tar.gz", hash = "sha256:be5b9a7ed36437bb10a780d500154d426798ec16803ff3406f7a61107e4ebfc2"},
 ]
 hypothesis = [
-    {file = "hypothesis-6.10.0-py3-none-any.whl", hash = "sha256:1a00a4e3ef40041b2c072deab9c71e307bc5354bb4a102ef22ae8c23fa8b3970"},
-    {file = "hypothesis-6.10.0.tar.gz", hash = "sha256:9f8c130b1278d30cb3cc64e3a4aacb88c4906155772beed90ce33e06794e1ee0"},
+    {file = "hypothesis-6.10.1-py3-none-any.whl", hash = "sha256:1d65f58d82d1cbd35b6441bda3bb11cb1adc879d6b2af191aea388fa412171b1"},
+    {file = "hypothesis-6.10.1.tar.gz", hash = "sha256:586b6c46e90878c2546743afbed348bca51e1f30e3461fa701fad58c2c47c650"},
 ]
 idna = [
     {file = "idna-2.10-py2.py3-none-any.whl", hash = "sha256:b97d804b1e9b523befed77c48dacec60e6dcb0b5391d57af6a65a312a90648c0"},

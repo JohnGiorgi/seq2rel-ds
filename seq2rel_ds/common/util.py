@@ -19,7 +19,7 @@ class TextSegment(str, Enum):
     both = "both"
 
 
-def set_seeds():
+def set_seeds() -> None:
     """Sets the random seeds of python and numpy for reproducible preprocessing."""
     random.seed(SEED)
     np.random.seed(NUMPY_SEED)
