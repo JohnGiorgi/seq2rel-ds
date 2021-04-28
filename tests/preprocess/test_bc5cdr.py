@@ -10,7 +10,7 @@ runner = CliRunner()
 class TestBC5CDR(Seq2RelDSTestCase):
     def setup_method(self) -> None:
         super().setup_method()
-        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "bc5cdr"
+        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "BC5CDR"
         self.train_path = self.data_dir / bc5cdr.TRAIN_FILENAME
         self.valid_path = self.data_dir / bc5cdr.VALID_FILENAME
         self.test_path = self.data_dir / bc5cdr.TEST_FILENAME
@@ -78,17 +78,17 @@ class TestBC5CDR(Seq2RelDSTestCase):
             )
         ]
 
-    def test_preprocess_bc5cdr(self) -> None:
+    def test_preprocess(self) -> None:
         # training data
-        actual = bc5cdr._preprocess_bc5cdr(self.train_path)
+        actual = bc5cdr._preprocess(self.train_path)
         assert actual == self.train
 
         # validation data
-        actual = bc5cdr._preprocess_bc5cdr(self.valid_path)
+        actual = bc5cdr._preprocess(self.valid_path)
         assert actual == self.valid
 
         # test data
-        actual = bc5cdr._preprocess_bc5cdr(self.test_path)
+        actual = bc5cdr._preprocess(self.test_path)
         assert actual == self.test
 
     def test_bc5cdr_command(self, tmp_path: Path) -> None:
@@ -99,13 +99,13 @@ class TestBC5CDR(Seq2RelDSTestCase):
         assert result.exit_code == 0
 
         # training data
-        actual = (tmp_path / "train.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "train.tsv").read_text().strip("\n").split("\n")
         assert actual == self.train
 
         # validation data
-        actual = (tmp_path / "valid.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "valid.tsv").read_text().strip("\n").split("\n")
         assert actual == self.valid
 
         # test data
-        actual = (tmp_path / "test.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "test.tsv").read_text().strip("\n").split("\n")
         assert actual == self.test

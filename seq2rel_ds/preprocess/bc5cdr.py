@@ -11,7 +11,7 @@ VALID_FILENAME = "CDR_DevelopmentSet.PubTator.txt"
 TEST_FILENAME = "CDR_TestSet.PubTator.txt"
 
 
-def _preprocess_bc5cdr(filepath: Path) -> List[str]:
+def _preprocess(filepath: Path) -> List[str]:
     pubtator_content = Path(filepath).read_text()
     parsed = util.parse_pubtator(
         pubtator_content=pubtator_content, text_segment=util.TextSegment.both
@@ -56,9 +56,9 @@ def main(
     dev_filepath = Path(input_dir) / VALID_FILENAME
     test_filepath = Path(input_dir) / TEST_FILENAME
 
-    train = _preprocess_bc5cdr(train_filepath)
-    valid = _preprocess_bc5cdr(dev_filepath)
-    test = _preprocess_bc5cdr(test_filepath)
+    train = _preprocess(train_filepath)
+    valid = _preprocess(dev_filepath)
+    test = _preprocess(test_filepath)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -9,9 +9,9 @@ runner = CliRunner()
 
 
 class TestADE(Seq2RelDSTestCase):
-    def test_preprocess_ade(self) -> None:
+    def test_preprocess(self) -> None:
         # In absense of testing the entire data set, we sanity check the first and last examples
-        actual = ade._preprocess_ade_v2()
+        actual = ade._preprocess()
         assert actual[0] == (
             "Intravenous azithromycin-induced ototoxicity."
             f"\t@{ade.REL_LABEL}@ azithromycin @{ade.DRUG_LABEL}@ ototoxicity @{ade.EFFECT_LABEL}@ {util.END_OF_REL_SYMBOL}"
