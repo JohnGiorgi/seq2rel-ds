@@ -11,6 +11,8 @@ SEED = 13370
 NUMPY_SEED = 1337
 
 END_OF_REL_SYMBOL = "@EOR@"
+NO_REL_SYMBOL = "@NOR@"
+COREF_SEP_SYMBOL = ";"
 
 
 class TextSegment(str, Enum):
@@ -62,13 +64,13 @@ def train_valid_test_split(
 
 
 def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
-    """Given an arbitrary number of coreferent mentions (`*args`), a label for each of those
+    """Given an arbitrary number of coreferent mentions (`ent_clusters`), a label for each of those
     mentions (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted string
     that can be used to train a seq2rel model.
     """
     formatted_rel = f"@{rel_label.strip().upper()}@"
     for ents, label in zip(ent_clusters, ent_labels):
-        ents = sanitize_text("; ".join(ents), lowercase=True)
+        ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
         formatted_rel += f" {ents} @{label.strip().upper()}@"
     formatted_rel += f" {END_OF_REL_SYMBOL}"
     return formatted_rel
