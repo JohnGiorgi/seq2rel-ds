@@ -99,13 +99,13 @@ class TestBC5CDR(Seq2RelDSTestCase):
         assert result.exit_code == 0
 
         # training data
-        actual = (tmp_path / "train.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "train.tsv").read_text().strip("\n").split("\n")
         assert actual == self.train
 
         # validation data
-        actual = (tmp_path / "valid.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "valid.tsv").read_text().strip("\n").split("\n")
         assert actual == self.valid
 
         # test data
-        actual = (tmp_path / "test.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "test.tsv").read_text().strip("\n").split("\n")
         assert actual == self.test

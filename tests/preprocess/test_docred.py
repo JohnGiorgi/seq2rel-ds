@@ -59,7 +59,7 @@ class TestDocRED(Seq2RelDSTestCase):
                 " is also found in the Caribbean and Mediterranean Seas . The short - beaked common"
                 " dolphin is also abundant in the Black Sea , Gulf of Mexico , and Red Sea . They"
                 " follow the gulf stream up to Norwegian waters . Seldom do any short - beaked"
-                " dolphin venture near the Arctic .\t@NOR@"
+                " dolphin venture near the Arctic .\t"
             ),
         ]
         self.valid = [
@@ -109,8 +109,7 @@ class TestDocRED(Seq2RelDSTestCase):
                 " Nevertheless , thanks to the arguments of the well - known and respected"
                 " Ecuadorian writer Alejandro Carrión ( 1915 – 1992 ) , Miguel Riofrío 's La"
                 " Emancipada has been accepted as Ecuador 's first novel . Riofrio died in exile in"
-                " Peru ."
-                "\t@NOR@"
+                " Peru .\t"
             )
         ]
 
@@ -135,13 +134,13 @@ class TestDocRED(Seq2RelDSTestCase):
         assert result.exit_code == 0
 
         # training data
-        actual = (tmp_path / "train.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "train.tsv").read_text().strip("\n").split("\n")
         assert actual == self.train
 
         # validation data
-        actual = (tmp_path / "valid.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "valid.tsv").read_text().strip("\n").split("\n")
         assert actual == self.valid
 
         # test data
-        actual = (tmp_path / "test.tsv").read_text().strip().split("\n")
+        actual = (tmp_path / "test.tsv").read_text().strip("\n").split("\n")
         assert actual == self.test
