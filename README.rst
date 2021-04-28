@@ -68,7 +68,7 @@ There are two submodules:
 
 
 #. `preprocess`: used to preprocess existing datasets in a format that can be used with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
-#. ``align``\ : used to generate training data using weak/distant supervision.
+#. `align`: used to generate data for distantly supervised learning with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
 
 ``preprocess``
 ^^^^^^^^^^^^^^^^^^
