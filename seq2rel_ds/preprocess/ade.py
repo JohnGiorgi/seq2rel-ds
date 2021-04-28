@@ -13,7 +13,7 @@ DRUG_LABEL = "DRUG"
 EFFECT_LABEL = "EFFECT"
 
 
-def get_offsets(text: str, drug: str, effect: str, indexes: Dict[str, Any]) -> Tuple[int]:
+def get_offsets(text: str, drug: str, effect: str, indexes: Dict[str, Any]) -> Tuple[int, ...]:
     """Returns the start character index of `drug` and `effect` in `text`."""
 
     # Try to use the indices if they are provided.
@@ -38,7 +38,7 @@ def _preprocess() -> List[str]:
     dataset = load_dataset("ade_corpus_v2", "Ade_corpus_v2_drug_ade_relation")["train"]
 
     # Step 1: Process the dataset line by line, collecting formatted relations and their offsets.
-    processed_dataset = {}
+    processed_dataset: Dict[str, Any] = {}
     with typer.progressbar(dataset, label="Processing") as progress:
         for line in progress:
             text = line["text"]
@@ -78,7 +78,7 @@ def main(output_dir: Path) -> None:
     dataset = _preprocess()
     train, valid, test = util.train_valid_test_split(dataset)
 
-    output_dir: Path = Path(output_dir)
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     (output_dir / "train.tsv").write_text("\n".join(train))
