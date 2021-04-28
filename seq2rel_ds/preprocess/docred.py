@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import typer
 from seq2rel_ds.common import util
@@ -13,20 +13,21 @@ VALID_FILENAME = "dev.json"
 TEST_FILENAME = "test.json"
 REL_INFO_FILENAME = "rel_info.json"
 
-# A custom type matching the name of the DocRED vertexSet JSON object
-VertexSet = List[Dict[str, Union[str, int]]]
+# Some custom types for working with the DocRED vertexSet JSON object
+VertexSet = List[Dict[str, Any]]
+ParsedVetex = Tuple[List[str], List[List[int]], str]
 
 
-def _parse_vertex_set(vertex_set: VertexSet) -> Tuple[List[str], ...]:
-    names = []
-    offsets = []
-    label = None
+def _parse_vertex_set(vertex_set: VertexSet) -> ParsedVetex:
+    names: List[str] = []
+    offsets: List[List[int]] = []
+    label: str = ""
     for vertex in vertex_set:
         name = vertex["name"].lower()
         if name not in names:
             names.append(name)
         offsets.append(vertex["pos"])
-        if label is None:
+        if not label:
             label = vertex["type"]
     return names, offsets, label
 
@@ -70,10 +71,6 @@ def _preprocess(filepath: Path, rel_labels: Optional[Dict[str, str]] = None) -> 
 
         if relations:
             relations = util.sort_by_offset(relations, offsets)
-        # The document may contain no relations, in which case the target string
-        # is just the special "no relation symbol"
-        else:
-            relations = [util.NO_REL_SYMBOL]
         processed_dataset.append(f"{text}\t{' '.join(relations)}")
     return processed_dataset
 
