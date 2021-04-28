@@ -236,8 +236,7 @@ def main(
         None, help="The maximum number of PMIDs to produce alignments for."
     ),
 ) -> None:
-    """Use BioGRID to create data for distantly supervised learning with seq2rel.
-    """
+    """Use BioGRID to create data for distantly supervised learning with seq2rel."""
 
     _align(
         input_dir=input_dir,
