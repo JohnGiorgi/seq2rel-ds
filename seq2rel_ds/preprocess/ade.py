@@ -34,7 +34,7 @@ def get_offsets(text: str, drug: str, effect: str, indexes: Dict[str, Any]) -> T
     return drug_start, drug_end, effect_start, effect_end
 
 
-def _preprocess_ade_v2() -> List[str]:
+def _preprocess() -> List[str]:
     dataset = load_dataset("ade_corpus_v2", "Ade_corpus_v2_drug_ade_relation")["train"]
 
     # Step 1: Process the dataset line by line, collecting formatted relations and their offsets.
@@ -75,7 +75,7 @@ def _preprocess_ade_v2() -> List[str]:
 @app.callback(invoke_without_command=True)
 def main(output_dir: Path) -> None:
     """Download and preprocess the ADE V2 corpus for use with seq2rel."""
-    dataset = _preprocess_ade_v2()
+    dataset = _preprocess()
     train, valid, test = util.train_valid_test_split(dataset)
 
     output_dir: Path = Path(output_dir)
