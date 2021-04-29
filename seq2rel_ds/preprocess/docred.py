@@ -42,9 +42,11 @@ def _preprocess(filepath: Path, rel_labels: Optional[Dict[str, str]] = None) -> 
         # The use of get here is because the key "labels" may not exist for some examples
         for label in example.get("labels", []):
             # Rel labels are just arbitrary identifiers. Use the provided dict to get actual names
-            rel_label = (
-                "_".join(rel_labels[label["r"]].split()).upper() if rel_labels else label["r"]
-            )
+            if rel_labels:
+                rel_label = rel_labels[label["r"]]
+                rel_label = "_".join(rel_label.strip().replace(",", "").upper().split())
+            else:
+                rel_label = label["r"]
             # For some godforsaken reason, the indices are 1-indexed
             head_vertex = example["vertexSet"][label["h"]]
             tail_vertex = example["vertexSet"][label["t"]]

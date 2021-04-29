@@ -96,7 +96,25 @@ class TestDocRED(Seq2RelDSTestCase):
                 " @CONFLICT@ uss sturgeon @MISC@ world war ii @MISC@ @EOR@"
                 " @COUNTRY@ mv neptuna @MISC@ australia @LOC@ @EOR@"
                 " @COUNTRY@ hmat zealandia @MISC@ australia @LOC@ @EOR@"
-            )
+            ),
+            (
+                "The 4th House of Orléans , sometimes called the House of Bourbon - Orléans ( ) to"
+                " distinguish it , is the fourth holder of a surname previously used by several"
+                " branches of the Royal House of France , all descended in the legitimate male line"
+                " from the dynasty 's founder , Hugh Capet . The house was founded in 1661 by"
+                " Prince Philippe , Duke of Anjou , younger son of king Louis XIII and younger"
+                ' brother of king Louis XIV , the " Sun King " . From 1709 until the French'
+                " Revolution , the Orléans dukes were next in the order of succession to the French"
+                " throne after members of the senior branch of the House of Bourbon , descended"
+                " from king Louis XIV . Although Louis XIV 's direct descendants retained the"
+                " throne , his brother Philippe 's descendants flourished until the end of the"
+                " French monarchy . They held the Crown from 1830 to 1848 , and they still are"
+                " pretenders to the French throne ."
+                "\t@ETHNIC_GROUP@ louis xiv; sun king @PER@ french @LOC@ @EOR@"
+                " @LANGUAGES_SPOKEN_WRITTEN_OR_SIGNED@ louis xiv; sun king @PER@ french @LOC@ @EOR@"
+                " @FATHER@ louis xiv; sun king @PER@ louis xiii @PER@ @EOR@"
+                " @CHILD@ louis xiii @PER@ louis xiv; sun king @PER@ @EOR@"
+            ),
         ]
         self.test = [
             (
