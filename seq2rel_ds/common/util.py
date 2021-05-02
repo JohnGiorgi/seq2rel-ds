@@ -93,7 +93,7 @@ def parse_pubtator(
     skip_malformed: bool = False,
 ) -> Dict[str, PubtatorAnnotation]:
     """Parses a PubTator format string (`pubtator_content`) returning a highly structured,
-    dictionary keyed by PMID.
+    dictionary-like object keyed by PMID.
 
     # Parameters
 
