@@ -88,7 +88,7 @@ def test_parse_pubtator_raises_value_error() -> None:
     pubtator_content = f"""
     {pmid}|t|{title_text}
     {pmid}|a|{abstract_text}
-    {pmid}	0	25	Cerebral sinus thrombosis	Disease
+    {pmid}\t0\t25\tCerebral sinus thrombosis\tDisease
     """
 
     # There should be no error when skip_malformed is True...
@@ -109,11 +109,11 @@ def test_parse_pubtator() -> None:
     pubtator_content = f"""
     {pmid}|t|{title_text}
     {pmid}|a|{abstract_text}
-    {pmid}	0	25	Cerebral sinus thrombosis	Disease	D012851
-    {pmid}	81	92	menorrhagia	Disease	D008595
-    {pmid}	149	194	sagittal and left transverse sinus thrombosis	Disease	D020225|D020227	sagittal sinus thrombosis|left transverse sinus thrombosis
-    {pmid}	221	246	epsilon-aminocaproic acid	Chemical	D015119
-    {pmid}	CID	D015119	D020225
+    {pmid}\t0\t25\tCerebral sinus thrombosis\tDisease\tD012851
+    {pmid}\t81\t92\tmenorrhagia\tDisease\tD008595
+    {pmid}\t149\t194\tsagittal and left transverse sinus thrombosis\tDisease\tD020225|D020227\tsagittal sinus thrombosis|left transverse sinus thrombosis
+    {pmid}\t221\t246\tepsilon-aminocaproic acid\tChemical\tD015119
+    {pmid}\tCID\tD015119\tD020225
     """
 
     title_clusters = {
