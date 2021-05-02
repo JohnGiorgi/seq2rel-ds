@@ -13,7 +13,8 @@ per-file-ignores =
 
     # tests don't have to respect
     #  E731: do not assign a lambda expression, use a def
-    tests/**:E731
+    #  E501: line to long
+    tests/**:E731,E501
 
     # scripts don't have to respect
     #  E402: imports not at top of file (because we mess with sys.path)
