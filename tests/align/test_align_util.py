@@ -1,5 +1,6 @@
 from seq2rel_ds.align import util
 from seq2rel_ds.common import schemas
+from seq2rel_ds.common.util import TextSegment
 
 
 def test_query_pubtator() -> None:
@@ -54,9 +55,7 @@ def test_query_pubtator() -> None:
             relations=[],
         ),
     }
-    actual = util.query_pubtator(
-        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.title
-    )
+    actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.title)
     # Breaking up the asserts leads to much clearer outputs when the test fails
     assert actual[pmid].text == expected[pmid].text
     assert actual[pmid].clusters == expected[pmid].clusters
@@ -70,9 +69,7 @@ def test_query_pubtator() -> None:
             relations=[],
         ),
     }
-    actual = util.query_pubtator(
-        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.abstract
-    )
+    actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.abstract)
     assert actual[pmid].text == expected[pmid].text
     assert actual[pmid].clusters == expected[pmid].clusters
     assert actual[pmid].relations == expected[pmid].relations
@@ -85,9 +82,7 @@ def test_query_pubtator() -> None:
             relations=[],
         ),
     }
-    actual = util.query_pubtator(
-        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.both
-    )
+    actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.both)
     assert actual[pmid].text == expected[pmid].text
     assert actual[pmid].clusters == expected[pmid].clusters
     assert actual[pmid].relations == expected[pmid].relations

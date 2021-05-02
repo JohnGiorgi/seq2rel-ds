@@ -14,7 +14,7 @@ TEST_FILENAME = "CDR_TestSet.PubTator.txt"
 def _preprocess(filepath: Path) -> List[str]:
     pubtator_content = Path(filepath).read_text()
     parsed = util.parse_pubtator(
-        pubtator_content=pubtator_content, text_segment=util.TextSegment.both
+        pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
     )
 
     processed_dataset = []

@@ -36,13 +36,14 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 "\t@CID@ alpha-methyldopa @CHEMICAL@ hypotensive @DISEASE@ @EOR@"
             ),
             (
-                "Lidocaine-induced cardiac asystole. Intravenous administration of a single 50-mg bolus"
-                " of lidocaine in a 67-year-old man resulted in profound depression of the activity of"
-                " the sinoatrial and atrioventricular nodal pacemakers. The patient had no apparent"
-                " associated conditions which might have predisposed him to the development of"
-                " bradyarrhythmias; and, thus, this probably represented a true idiosyncrasy to"
-                " lidocaine."
-                "\t@CID@ lidocaine @CHEMICAL@ cardiac asystole @DISEASE@ @EOR@"
+                "Sulpiride-induced tardive dystonia. Sulpiride is a selective D2-receptor"
+                " antagonist with antipsychotic and antidepressant properties. Although initially"
+                " thought to be free of extrapyramidal side effects, sulpiride-induced tardive"
+                " dyskinesia and parkinsonism have been reported occasionally. We studied a"
+                " 37-year-old man who developed persistent segmental dystonia within 2 months"
+                " after starting sulpiride therapy. We could not find any previous reports of"
+                " sulpiride-induced tardive dystonia."
+                "\t@CID@ sulpiride @CHEMICAL@ tardive dystonia; dystonia @DISEASE@ @EOR@"
             ),
         ]
         self.valid = [

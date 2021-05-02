@@ -75,13 +75,39 @@ def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_la
     return formatted_rel
 
 
+def sort_entity_annotations(annotations: List[str]) -> str:
+    """Sort PubTator entity annotations by order of first appearence."""
+
+    # We only sort the entities, so we have to seperate them from the relations,
+    # perform the sort and then join everything together.
+    ents = [ann for ann in annotations if len(ann.split("\t")) != 4]
+    rels = [ann for ann in annotations if len(ann.split("\t")) == 4]
+    sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]))
+    return sorted_ents + rels
+
+
 def parse_pubtator(
     pubtator_content: str,
     text_segment: TextSegment = TextSegment.both,
+    sort_ents: bool = True,
     skip_malformed: bool = False,
 ) -> Dict[str, PubtatorAnnotation]:
     """Parses a PubTator format string (`pubtator_content`) returning a highly structured,
-    dictionary keyed by PMID.
+    dictionary-like object keyed by PMID.
+
+    # Parameters
+
+    pubtator_content : `str`
+        A string containing one or more articles in the PubTator format.
+    text_segment : `TextSegment`, optional (default = `TextSegment.both`)
+        Which segment of the text we should consider. Valid values are `TextSegment.title`,
+        `TextSegment.abstract` or `TextSegment.both`.
+    sort_ents : bool, optional (default = `True`)
+        Whether entities should be sorted by order of first appearence. This useful for traditional
+        seq2seq models that use an order-sensitive loss function, like negative log likelihood.
+    skip_malformed : bool, optional (default = `False`)
+        True if we should ignore malformed annotations that cannot be parsed. This is useful in
+        some cases, like when we are generating data using distant supervision.
     """
     # Get a list of PubTator annotations
     articles = pubtator_content.strip().split("\n\n")
@@ -91,6 +117,8 @@ def parse_pubtator(
     for article in articles:
         article = article.strip().split("\n")
         title, abstract, annotations = article[0], article[1], article[2:]
+        if sort_ents:
+            annotations = sort_entity_annotations(annotations)
         pmid, title = title.split("|t|")
         abstract = abstract.split("|a|")[-1]
         # Some very basic preprocessing
@@ -99,10 +127,16 @@ def parse_pubtator(
 
         # We may want to experiement with different text sources
         if text_segment.value == "both":
-            text = f"{title} {abstract}"
+            text = f"{title} {abstract}" if abstract else title
         elif text_segment.value == "title":
             text = title
         else:
+            # In at least one corpus (GDA), there is a title but no abstract.
+            # we handle that by ignoring it when text_segment is "both", and
+            # raising an error when it is "abstract"
+            if not abstract:
+                msg = f"text_segment was {text_segment.value} but no abstract was found"
+                raise ValueError(msg)
             text = abstract
 
         parsed[pmid] = PubtatorAnnotation(text=text)

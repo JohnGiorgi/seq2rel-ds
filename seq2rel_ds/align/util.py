@@ -4,7 +4,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from seq2rel_ds.common import util
 from seq2rel_ds.common.schemas import PubtatorAnnotation
-from seq2rel_ds.common.util import TextSegment
 from urllib3.util.retry import Retry
 
 # API URLs
@@ -23,17 +22,24 @@ s.mount("https://", HTTPAdapter(max_retries=retries))
 
 
 def query_pubtator(
-    pmids: List[str],
-    concepts: Optional[List[str]] = None,
-    text_segment: TextSegment = TextSegment.both,
-    skip_malformed: bool = False,
+    pmids: List[str], concepts: Optional[List[str]] = None, **kwargs
 ) -> Dict[str, PubtatorAnnotation]:
+    """Queries PubTator for the given `pmids` and `concepts`, parses the results and
+    returns a highly structured dictionary-like object keyed by PMID. `**kwargs` are passed to
+    `seq2rel_ds.common.util.parse_pubtator`.
+    For details on the PubTator API, see: https://www.ncbi.nlm.nih.gov/research/pubtator/api.html
+
+    # Parameters
+
+    pmids : `List[str]`
+        A list of PMIDs to query PubTator with.
+    concepts : `List[str]`, optional (default = `None`)
+        A list of concepts to include in the PubTator results.
+    """
     body = {"pmids": pmids}
     if concepts is not None:
         body["concepts"] = concepts
     r = s.post(PUBTATOR_API_URL, json=body)
     pubtator_content = r.text.strip()
-    annotations = util.parse_pubtator(
-        pubtator_content, text_segment=text_segment, skip_malformed=skip_malformed
-    )
+    annotations = util.parse_pubtator(pubtator_content, **kwargs)
     return annotations
