@@ -56,6 +56,9 @@ def train_valid_test_split(
 
     See https://datascience.stackexchange.com/a/53161 for details.
     """
+    size_sum = train_size + valid_size + test_size
+    if size_sum != 1.0:
+        raise ValueError(f"train_size, valid_size and test_size must sum to one. Got {size_sum}.")
     # Round to avoid precision errors.
     train, test = train_test_split(data, test_size=round(1 - train_size, 4), **kwargs)
     valid, test = train_test_split(test, test_size=test_size / (test_size + valid_size), **kwargs)
@@ -75,7 +78,7 @@ def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_la
     return formatted_rel
 
 
-def sort_entity_annotations(annotations: List[str]) -> str:
+def sort_entity_annotations(annotations: List[str]) -> List[str]:
     """Sort PubTator entity annotations by order of first appearence."""
 
     # We only sort the entities, so we have to seperate them from the relations,
@@ -115,8 +118,8 @@ def parse_pubtator(
     # Parse the annotations, producing a highly structured output
     parsed = {}
     for article in articles:
-        article = article.strip().split("\n")
-        title, abstract, annotations = article[0], article[1], article[2:]
+        split_article = article.strip().split("\n")
+        title, abstract, annotations = split_article[0], split_article[1], split_article[2:]
         if sort_ents:
             annotations = sort_entity_annotations(annotations)
         pmid, title = title.split("|t|")
@@ -142,14 +145,14 @@ def parse_pubtator(
         parsed[pmid] = PubtatorAnnotation(text=text)
 
         for ann in annotations:
-            ann = ann.strip().split("\t")
+            split_ann = ann.strip().split("\t")
 
-            if len(ann) >= 6:
-                if len(ann) == 6:
-                    _, start, end, texts, label, uids = ann
-                elif len(ann) == 7:
-                    _, start, end, _, label, uids, texts = ann
-                start, end = int(start), int(end)
+            if len(split_ann) >= 6:
+                if len(split_ann) == 6:
+                    _, start, end, texts, label, uids = split_ann
+                elif len(split_ann) == 7:
+                    _, start, end, _, label, uids, texts = split_ann
+                start, end = int(start), int(end)  # type: ignore
 
                 # Ignore this annotation if it is not in the chosen text segment
                 section = "title" if int(start) < len(title) else "abstract"
@@ -160,7 +163,7 @@ def parse_pubtator(
                 # individual entities in a compound entity. So we deal with that here.
                 # Note that the start & end indicies will no longer be exactly correct, but are
                 # be close enough for our purposes of sorting entities by order of appearence.
-                texts, uids = texts.split("|"), uids.split("|")
+                texts, uids = texts.split("|"), uids.split("|")  # type: ignore
 
                 for text, uid in zip(texts, uids):
                     # All entities are lowercased here to simplify the logic downstream.
@@ -176,8 +179,8 @@ def parse_pubtator(
                         parsed[pmid].clusters[uid] = PubtatorCluster(
                             ents=[text], offsets=[(start, end)], label=label
                         )
-            elif len(ann) == 4:  # this is a relation
-                _, label, uid_1, uid_2 = ann
+            elif len(split_ann) == 4:  # this is a relation
+                _, label, uid_1, uid_2 = split_ann
                 if uid_1 in parsed[pmid].clusters and uid_2 in parsed[pmid].clusters:
                     parsed[pmid].relations.append((uid_1, uid_2, label))
             # For some cases (like distant supervision) it is convient to skip any annotations
@@ -186,7 +189,40 @@ def parse_pubtator(
                 if skip_malformed:
                     continue
                 else:
-                    err_msg = "Found an annotation with an unexpected number of columns: {}"
-                    raise ValueError(err_msg.format(format(" ".join(ann))))
+                    err_msg = f"Found an annotation with an unexpected number of columns: {ann}"
+                    raise ValueError(err_msg)
 
     return parsed
+
+
+def pubtator_to_seq2rel(pubtator_annotations: Dict[str, PubtatorAnnotation]) -> List[str]:
+    """Converts the highly structed `pubtator_annotations` input to a format that can be used
+    with seq2rel.
+    """
+    seq2rel_annotations = []
+
+    for annotation in pubtator_annotations.values():
+        relations = []
+        offsets = []
+
+        for rel in annotation.relations:
+            uid_1, uid_2, rel_label = rel
+            # Keep track of the end offsets of each entity. We will use these to sort
+            # relations according to their order of first appearence in the text.
+            offset_1 = min((end for _, end in annotation.clusters[uid_1].offsets))
+            offset_2 = min((end for _, end in annotation.clusters[uid_2].offsets))
+            offset = offset_1 + offset_2
+            ent_clusters = [annotation.clusters[uid_1].ents, annotation.clusters[uid_2].ents]
+            ent_labels = [annotation.clusters[uid_1].label, annotation.clusters[uid_2].label]
+            relation = format_relation(
+                ent_clusters=ent_clusters,
+                ent_labels=ent_labels,
+                rel_label=rel_label,
+            )
+            relations.append(relation)
+            offsets.append(offset)
+
+        relations = sort_by_offset(relations, offsets)
+        seq2rel_annotations.append(f"{annotation.text}\t{' '.join(relations)}")
+
+    return seq2rel_annotations
