@@ -75,38 +75,14 @@ def _preprocess(
     labels: str,
 ) -> List[str]:
 
-    pubtator_formatted_data = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
-    parsed = util.parse_pubtator(
-        pubtator_content=pubtator_formatted_data, text_segment=util.TextSegment.both, sort_ents=True
+    pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
+    pubtator_annotations = util.parse_pubtator(
+        pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
     )
 
-    processed_dataset = []
+    seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations)
 
-    for annotation in parsed.values():
-        relations = []
-        offsets = []
-
-        for rel in annotation.relations:
-            uid_1, uid_2, rel_label = rel
-            # Keep track of the end offsets of each entity. We will use these to sort
-            # relations according to their order of first appearence in the text.
-            offset_1 = min((end for _, end in annotation.clusters[uid_1].offsets))
-            offset_2 = min((end for _, end in annotation.clusters[uid_2].offsets))
-            offset = offset_1 + offset_2
-            ent_clusters = [annotation.clusters[uid_1].ents, annotation.clusters[uid_2].ents]
-            ent_labels = [annotation.clusters[uid_1].label, annotation.clusters[uid_2].label]
-            relation = util.format_relation(
-                ent_clusters=ent_clusters,
-                ent_labels=ent_labels,
-                rel_label=rel_label,
-            )
-            relations.append(relation)
-            offsets.append(offset)
-
-        relations = util.sort_by_offset(relations, offsets)
-        processed_dataset.append(f"{annotation.text}\t{' '.join(relations)}")
-
-    return processed_dataset
+    return seq2rel_annotations
 
 
 @app.callback(invoke_without_command=True)
@@ -115,14 +91,14 @@ def main(
 ) -> None:
     """Download and preprocess the GDA corpus for use with seq2rel."""
     msg.divider("Preprocessing GDA")
-    # Collect the training data
-    with msg.loading("Downloading training data..."):
+
+    with msg.loading("Downloading the training data..."):
         train_abstracts = requests.get(GDA_DATA_URL + f"/{TRAIN_DATA}/" + ABSTRACTS_FILENAME).text
         train_anns = requests.get(GDA_DATA_URL + f"/{TRAIN_DATA}/" + ANNS_FILENAME).text
         train_labels = requests.get(GDA_DATA_URL + f"/{TRAIN_DATA}/" + LABELS_FILENAME).text
     msg.good("Downloaded the training data")
-    # Collect the testing data
-    with msg.loading("Downloading test data..."):
+
+    with msg.loading("Downloading the test data..."):
         test_abstracts = requests.get(GDA_DATA_URL + f"/{TEST_DATA}/" + ABSTRACTS_FILENAME).text
         test_anns = requests.get(GDA_DATA_URL + f"/{TEST_DATA}/" + ANNS_FILENAME).text
         test_labels = requests.get(GDA_DATA_URL + f"/{TEST_DATA}/" + LABELS_FILENAME).text
@@ -130,10 +106,10 @@ def main(
 
     with msg.loading("Preprocessing the training data..."):
         train = _preprocess(train_abstracts, train_anns, train_labels)
-    msg.good("Finished preprocessing the training data")
+    msg.good("Preprocessed the training data")
     with msg.loading("Preprocessing the test data..."):
         test = _preprocess(test_abstracts, test_anns, test_labels)
-    msg.good("Finished preprocessing the test data")
+    msg.good("Preprocessed the test data")
 
     train, valid = train_test_split(train, test_size=VALID_SIZE)
     msg.info(f"Holding out {VALID_SIZE:.2%} of the training data as a validation set")

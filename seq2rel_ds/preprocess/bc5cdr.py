@@ -1,64 +1,58 @@
+import io
+import zipfile
 from pathlib import Path
 from typing import List
 
+import requests
 import typer
+from seq2rel_ds import msg
 from seq2rel_ds.common import util
 
 app = typer.Typer()
 
+BC5CDR_URL = "https://biocreative.bioinformatics.udel.edu/media/store/files/2016/CDR_Data.zip"
+PARENT_DIR = "CDR_Data/CDR.Corpus.v010516"
 TRAIN_FILENAME = "CDR_TrainingSet.PubTator.txt"
 VALID_FILENAME = "CDR_DevelopmentSet.PubTator.txt"
 TEST_FILENAME = "CDR_TestSet.PubTator.txt"
 
 
-def _preprocess(filepath: Path) -> List[str]:
-    pubtator_content = Path(filepath).read_text()
-    parsed = util.parse_pubtator(
+def _preprocess(pubtator_content: str) -> List[str]:
+    pubtator_annotations = util.parse_pubtator(
         pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
     )
+    seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations)
 
-    processed_dataset = []
-
-    for annotation in parsed.values():
-        relations = []
-        offsets = []
-
-        for rel in annotation.relations:
-            uid_1, uid_2, rel_label = rel
-            # Keep track of the end offsets of each entity. We will use these to sort
-            # relations according to their order of first appearence in the text.
-            offset_1 = min((end for _, end in annotation.clusters[uid_1].offsets))
-            offset_2 = min((end for _, end in annotation.clusters[uid_2].offsets))
-            offset = offset_1 + offset_2
-            ent_clusters = [annotation.clusters[uid_1].ents, annotation.clusters[uid_2].ents]
-            ent_labels = [annotation.clusters[uid_1].label, annotation.clusters[uid_2].label]
-            relation = util.format_relation(
-                ent_clusters=ent_clusters,
-                ent_labels=ent_labels,
-                rel_label=rel_label,
-            )
-            relations.append(relation)
-            offsets.append(offset)
-
-        relations = util.sort_by_offset(relations, offsets)
-        processed_dataset.append(f"{annotation.text}\t{' '.join(relations)}")
-
-    return processed_dataset
+    return seq2rel_annotations
 
 
 @app.callback(invoke_without_command=True)
 def main(
-    input_dir: Path = typer.Argument(..., help="Path to a local copy of the BC5CDR corpus."),
     output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
 ) -> None:
     """Preprocess a local copy of the BC5CDR corpus for use with seq2rel."""
-    train_filepath = Path(input_dir) / TRAIN_FILENAME
-    dev_filepath = Path(input_dir) / VALID_FILENAME
-    test_filepath = Path(input_dir) / TEST_FILENAME
+    msg.divider("Preprocessing BC5CDR")
 
-    train = _preprocess(train_filepath)
-    valid = _preprocess(dev_filepath)
-    test = _preprocess(test_filepath)
+    with msg.loading("Downloading corpus..."):
+        # https://stackoverflow.com/a/23419450/6578628
+        r = requests.get(BC5CDR_URL)
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+    msg.good("Downloaded the corpus")
+
+    with msg.loading("Preprocessing the training data..."):
+        raw = z.read(str(Path(PARENT_DIR) / TRAIN_FILENAME)).decode("utf8")
+        train = _preprocess(raw)
+    msg.good("Preprocessed the training data")
+
+    with msg.loading("Preprocessing the validation data..."):
+        raw = z.read(str(Path(PARENT_DIR) / VALID_FILENAME)).decode("utf8")
+        valid = _preprocess(raw)
+    msg.good("Preprocessed the validation data")
+
+    with msg.loading("Preprocessing the test data..."):
+        raw = z.read(str(Path(PARENT_DIR) / TEST_FILENAME)).decode("utf8")
+        test = _preprocess(raw)
+    msg.good("Preprocessed the test data")
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -66,6 +60,7 @@ def main(
     (output_dir / "train.tsv").write_text("\n".join(train))
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}")
 
 
 if __name__ == "__main__":
