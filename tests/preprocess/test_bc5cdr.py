@@ -81,32 +81,23 @@ class TestBC5CDR(Seq2RelDSTestCase):
 
     def test_preprocess(self) -> None:
         # training data
-        actual = bc5cdr._preprocess(self.train_path)
+        actual = bc5cdr._preprocess(self.train_path.read_text())
         assert actual == self.train
 
         # validation data
-        actual = bc5cdr._preprocess(self.valid_path)
+        actual = bc5cdr._preprocess(self.valid_path.read_text())
         assert actual == self.valid
 
         # test data
-        actual = bc5cdr._preprocess(self.test_path)
+        actual = bc5cdr._preprocess(self.test_path.read_text())
         assert actual == self.test
 
     def test_bc5cdr_command(self, tmp_path: Path) -> None:
-
-        input_dir = str(self.data_dir)
         output_dir = str(tmp_path)
-        result = runner.invoke(bc5cdr.app, [input_dir, output_dir])
+        result = runner.invoke(bc5cdr.app, [output_dir])
         assert result.exit_code == 0
 
-        # training data
-        actual = (tmp_path / "train.tsv").read_text().strip("\n").split("\n")
-        assert actual == self.train
-
-        # validation data
-        actual = (tmp_path / "valid.tsv").read_text().strip("\n").split("\n")
-        assert actual == self.valid
-
-        # test data
-        actual = (tmp_path / "test.tsv").read_text().strip("\n").split("\n")
-        assert actual == self.test
+        # Check that the expected files were created
+        assert (tmp_path / "train.tsv").is_file()
+        assert (tmp_path / "valid.tsv").is_file()
+        assert (tmp_path / "test.tsv").is_file()

@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from datasets import load_dataset
+from seq2rel_ds.common import util
 from seq2rel_ds.common.testing import Seq2RelDSTestCase
 from seq2rel_ds.preprocess import ade
 from typer.testing import CliRunner
-from seq2rel_ds.common import util
 
 runner = CliRunner()
 
@@ -11,7 +12,8 @@ runner = CliRunner()
 class TestADE(Seq2RelDSTestCase):
     def test_preprocess(self) -> None:
         # In absense of testing the entire data set, we sanity check the first and last examples
-        actual = ade._preprocess()
+        dataset = load_dataset("ade_corpus_v2", "Ade_corpus_v2_drug_ade_relation")["train"]
+        actual = ade._preprocess(dataset)
         assert actual[0] == (
             "Intravenous azithromycin-induced ototoxicity."
             f"\t@{ade.REL_LABEL}@ azithromycin @{ade.DRUG_LABEL}@ ototoxicity @{ade.EFFECT_LABEL}@ {util.END_OF_REL_SYMBOL}"

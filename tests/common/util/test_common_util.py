@@ -64,6 +64,16 @@ def test_train_valid_test_split():
     assert len(test) == int(test_size * len(data))
 
 
+def test_train_valid_test_split_value_error():
+    data = random.sample(range(0, 100), 10)
+    # train_size + valid_size + test_size != 1
+    train_size, valid_size, test_size = 0.7, 0.1, 0.3
+    with pytest.raises(ValueError):
+        _, _, _ = util.train_valid_test_split(
+            data, train_size=train_size, valid_size=valid_size, test_size=test_size
+        )
+
+
 def test_format_relation() -> None:
     # Add trailing and leading spaces throughout to ensure they are handled.
     rel_label = "Interaction "
