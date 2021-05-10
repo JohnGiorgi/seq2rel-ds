@@ -4,7 +4,7 @@ from operator import itemgetter
 from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
-from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
+from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster, PartitionStatistics
 from sklearn.model_selection import train_test_split
 
 SEED = 13370
@@ -227,3 +227,37 @@ def pubtator_to_seq2rel(pubtator_annotations: Dict[str, PubtatorAnnotation]) -> 
         seq2rel_annotations.append(f"{annotation.text}\t{' '.join(relations)}")
 
     return seq2rel_annotations
+
+
+def compute_corpus_statistics(
+    annotations: Dict[str, PubtatorAnnotation], nlp=None
+) -> PartitionStatistics:
+    num_relations = 0
+    num_inter_sent = 0
+
+    for doc_id, annotation in annotations.items():
+        doc = nlp(annotation.text)
+        num_relations += len(annotation.relations)
+        for relation in annotation.relations:
+            ent_1_offsets = annotation.clusters[relation[0]].offsets
+            ent_2_offsets = annotation.clusters[relation[1]].offsets
+            inter_sent = True
+            for sent in doc.sents:
+                # If a relation has two mentions within the same sentence,
+                # consider it an intra-sentence relation.
+                if any(
+                    start >= sent.start_char and end <= sent.end_char
+                    for start, end in ent_1_offsets
+                ) and any(
+                    start >= sent.start_char and end <= sent.end_char
+                    for start, end in ent_2_offsets
+                ):
+                    inter_sent = False
+                    break
+            num_inter_sent += int(inter_sent)
+    statistics = PartitionStatistics(
+        num_examples=len(annotations),
+        num_relations=num_relations,
+        per_inter_sent=num_inter_sent / num_relations,
+    )
+    return statistics
