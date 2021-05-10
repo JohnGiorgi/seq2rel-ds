@@ -4,7 +4,7 @@ from operator import itemgetter
 from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
-from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
+from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster, PartitionStatistics
 from sklearn.model_selection import train_test_split
 
 SEED = 13370
@@ -171,10 +171,11 @@ def parse_pubtator(
                     text = sanitize_text(text, lowercase=True)
 
                     if uid in parsed[pmid].clusters:
-                        # Don't retain duplicates
+                        # Don't retain duplicate text...
                         if text not in parsed[pmid].clusters[uid].ents:
                             parsed[pmid].clusters[uid].ents.append(text)
-                            parsed[pmid].clusters[uid].offsets.append((start, end))
+                        # ...but do retain offsets of all mentions
+                        parsed[pmid].clusters[uid].offsets.append((start, end))
                     else:
                         parsed[pmid].clusters[uid] = PubtatorCluster(
                             ents=[text], offsets=[(start, end)], label=label
@@ -183,8 +184,8 @@ def parse_pubtator(
                 _, label, uid_1, uid_2 = split_ann
                 if uid_1 in parsed[pmid].clusters and uid_2 in parsed[pmid].clusters:
                     parsed[pmid].relations.append((uid_1, uid_2, label))
-            # For some cases (like distant supervision) it is convient to skip any annotations
-            # that are malformed.
+            # For some cases (like distant supervision) it is convient to
+            # skip annotations that are malformed.
             else:
                 if skip_malformed:
                     continue
@@ -226,3 +227,37 @@ def pubtator_to_seq2rel(pubtator_annotations: Dict[str, PubtatorAnnotation]) -> 
         seq2rel_annotations.append(f"{annotation.text}\t{' '.join(relations)}")
 
     return seq2rel_annotations
+
+
+def compute_corpus_statistics(
+    annotations: Dict[str, PubtatorAnnotation], nlp=None
+) -> PartitionStatistics:
+    num_relations = 0
+    num_inter_sent = 0
+
+    for doc_id, annotation in annotations.items():
+        doc = nlp(annotation.text)
+        num_relations += len(annotation.relations)
+        for relation in annotation.relations:
+            ent_1_offsets = annotation.clusters[relation[0]].offsets
+            ent_2_offsets = annotation.clusters[relation[1]].offsets
+            inter_sent = True
+            for sent in doc.sents:
+                # If a relation has two mentions within the same sentence,
+                # consider it an intra-sentence relation.
+                if any(
+                    start >= sent.start_char and end <= sent.end_char
+                    for start, end in ent_1_offsets
+                ) and any(
+                    start >= sent.start_char and end <= sent.end_char
+                    for start, end in ent_2_offsets
+                ):
+                    inter_sent = False
+                    break
+            num_inter_sent += int(inter_sent)
+    statistics = PartitionStatistics(
+        num_examples=len(annotations),
+        num_relations=num_relations,
+        per_inter_sent=num_inter_sent / num_relations,
+    )
+    return statistics
