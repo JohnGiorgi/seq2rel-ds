@@ -25,25 +25,79 @@ def test_query_pubtator() -> None:
         " signaling by targeting MITA for ubiquitination and degradation at the mitochondria."
     )
     title_clusters = {
-        "6048": schemas.PubtatorCluster(ents=["rnf5"], offsets=[(21, 25)], label="Gene"),
+        "6048": schemas.PubtatorCluster(
+            ents=["rnf5"],
+            offsets=[(21, 25)],
+            label="Gene",
+        ),
         "340061": schemas.PubtatorCluster(ents=["mita"], offsets=[(104, 108)], label="Gene"),
     }
     abstract_clusters = {
         "4790": schemas.PubtatorCluster(ents=["nf-kappab"], offsets=[(158, 167)], label="Gene"),
-        "3661": schemas.PubtatorCluster(ents=["irf3"], offsets=[(172, 176)], label="Gene"),
-        "340061": schemas.PubtatorCluster(
-            ents=["mita", "sting"], offsets=[(270, 274), (290, 295)], label="Gene"
+        "3661": schemas.PubtatorCluster(
+            ents=["irf3"], offsets=[(172, 176), (378, 382), (554, 558)], label="Gene"
         ),
-        "6048": schemas.PubtatorCluster(ents=["rnf5"], offsets=[(440, 444)], label="Gene"),
+        "340061": schemas.PubtatorCluster(
+            ents=["mita", "sting"],
+            offsets=[
+                (270, 274),
+                (290, 295),
+                (461, 465),
+                (684, 688),
+                (762, 766),
+                (1000, 1004),
+                (1136, 1140),
+            ],
+            label="Gene",
+        ),
+        "6048": schemas.PubtatorCluster(
+            ents=["rnf5"],
+            offsets=[
+                (440, 444),
+                (523, 527),
+                (643, 647),
+                (670, 674),
+                (771, 775),
+                (1008, 1012),
+                (1071, 1075),
+            ],
+            label="Gene",
+        ),
         "3456": schemas.PubtatorCluster(ents=["ifnb1"], offsets=[(571, 576)], label="Gene"),
     }
     both_clusters = {
-        "6048": schemas.PubtatorCluster(ents=["rnf5"], offsets=[(21, 25)], label="Gene"),
+        "6048": schemas.PubtatorCluster(
+            ents=["rnf5"],
+            offsets=[
+                (21, 25),
+                (440, 444),
+                (523, 527),
+                (643, 647),
+                (670, 674),
+                (771, 775),
+                (1008, 1012),
+                (1071, 1075),
+            ],
+            label="Gene",
+        ),
         "340061": schemas.PubtatorCluster(
-            ents=["mita", "sting"], offsets=[(104, 108), (290, 295)], label="Gene"
+            ents=["mita", "sting"],
+            offsets=[
+                (104, 108),
+                (270, 274),
+                (290, 295),
+                (461, 465),
+                (684, 688),
+                (762, 766),
+                (1000, 1004),
+                (1136, 1140),
+            ],
+            label="Gene",
         ),
         "4790": schemas.PubtatorCluster(ents=["nf-kappab"], offsets=[(158, 167)], label="Gene"),
-        "3661": schemas.PubtatorCluster(ents=["irf3"], offsets=[(172, 176)], label="Gene"),
+        "3661": schemas.PubtatorCluster(
+            ents=["irf3"], offsets=[(172, 176), (378, 382), (554, 558)], label="Gene"
+        ),
         "3456": schemas.PubtatorCluster(ents=["ifnb1"], offsets=[(571, 576)], label="Gene"),
     }
 

@@ -171,10 +171,11 @@ def parse_pubtator(
                     text = sanitize_text(text, lowercase=True)
 
                     if uid in parsed[pmid].clusters:
-                        # Don't retain duplicates
+                        # Don't retain duplicate text...
                         if text not in parsed[pmid].clusters[uid].ents:
                             parsed[pmid].clusters[uid].ents.append(text)
-                            parsed[pmid].clusters[uid].offsets.append((start, end))
+                        # ...but do retain offsets of all mentions
+                        parsed[pmid].clusters[uid].offsets.append((start, end))
                     else:
                         parsed[pmid].clusters[uid] = PubtatorCluster(
                             ents=[text], offsets=[(start, end)], label=label
@@ -183,8 +184,8 @@ def parse_pubtator(
                 _, label, uid_1, uid_2 = split_ann
                 if uid_1 in parsed[pmid].clusters and uid_2 in parsed[pmid].clusters:
                     parsed[pmid].relations.append((uid_1, uid_2, label))
-            # For some cases (like distant supervision) it is convient to skip any annotations
-            # that are malformed.
+            # For some cases (like distant supervision) it is convient to
+            # skip annotations that are malformed.
             else:
                 if skip_malformed:
                     continue
