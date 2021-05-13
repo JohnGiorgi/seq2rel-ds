@@ -1,3 +1,4 @@
+import copy
 import random
 import re
 
@@ -205,3 +206,53 @@ def test_parse_pubtator() -> None:
     assert actual[pmid].text == expected[pmid].text
     assert actual[pmid].clusters == expected[pmid].clusters
     assert actual[pmid].relations == expected[pmid].relations
+
+
+def test_insert_ent_hints():
+    # A truncated example taken from the BC5CDR dataset
+    text = (
+        "Cerebral sinus thrombosis as a potential hazard of antifibrinolytic treatment in menorrhagia."
+        " We describe a 42-year-old woman who developed superior sagittal and left transverse sinus"
+        # Parentheses introduced on purpose to see if the function can handle it
+        " thrombosis associated with prolonged (epsilon-aminocaproic acid) therapy for menorrhagia."
+        # We add this entity again to check that it is only hinted at once
+        " epsilon-aminocaproic acid"
+    )
+    pubator_annotation = schemas.PubtatorAnnotation(
+        text=text,
+        clusters={
+            # These are out of order on purpose, to ensure the function can handle it
+            "D008595": schemas.PubtatorCluster(
+                ents=["menorrhagia"], offsets=[(81, 92), (261, 272)], label="Disease"
+            ),
+            "D012851": schemas.PubtatorCluster(
+                ents=["cerebral sinus thrombosis"],
+                offsets=[(0, 25)],
+                label="Disease",
+            ),
+            "D020225": schemas.PubtatorCluster(
+                ents=["sagittal sinus thrombosis"], offsets=[(149, 194)], label="Disease"
+            ),
+            "D020227": schemas.PubtatorCluster(
+                ents=["left transverse sinus thrombosis"], offsets=[(149, 194)], label="Disease"
+            ),
+            "D015119": schemas.PubtatorCluster(
+                ents=["epsilon-aminocaproic acid"],
+                offsets=[(222, 247), (338, 363)],
+                label="Chemical",
+            ),
+        },
+        relations=[("D015119", "D020225", "CID")],
+    )
+
+    actual = util.insert_ent_hints(pubator_annotation)
+    expected = copy.deepcopy(pubator_annotation)
+    expected.text = (
+        "Cerebral sinus thrombosis as a potential hazard of antifibrinolytic treatment in"
+        " menorrhagia. We describe a 42-year-old woman who developed superior @START_DISEASE@"
+        " sagittal and left transverse sinus thrombosis @END_DISEASE@ associated with prolonged"
+        " ( @START_CHEMICAL@ epsilon-aminocaproic acid @END_CHEMICAL@ ) therapy for menorrhagia."
+        " epsilon-aminocaproic acid"
+    )
+
+    assert actual == expected
