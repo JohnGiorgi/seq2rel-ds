@@ -12,6 +12,8 @@ NUMPY_SEED = 1337
 
 END_OF_REL_SYMBOL = "@EOR@"
 COREF_SEP_SYMBOL = ";"
+START_ENT_HINT = "@START_{}@"
+END_ENT_HINT = "@END_{}@"
 
 
 class TextSegment(str, Enum):
@@ -196,7 +198,56 @@ def parse_pubtator(
     return parsed
 
 
-def pubtator_to_seq2rel(pubtator_annotations: Dict[str, PubtatorAnnotation]) -> List[str]:
+def insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnotation:
+    """Given a `pubtator annotation`, inserts special tokens to the left and right of each
+    entity mention, which serve as hints to the model. This effectively turns the task into
+    relation extraction (as opposed to joint entity and relation extraction).
+    """
+    text = pubtator_annotation.text
+    right_shift = 0  # Running counter that we use to shift the original offsets
+
+    # First, we collect all mentions, offsets and labels, order them by first occurance and
+    # remove duplicate mentions/offsets. This is necessary for the insertion of entity hints.
+    mentions, offsets, labels = [], [], []
+    for relation in pubtator_annotation.relations:
+        clusters = [pubtator_annotation.clusters[uid] for uid in relation[:-1]]
+        for cluster in clusters:
+            for ent, offset in zip(cluster.ents, cluster.offsets):
+                if ent not in mentions and offset not in offsets:
+                    mentions.append(ent)
+                    offsets.append(offset)
+                    labels.append(cluster.label)
+    offsets, labels = zip(*sorted(zip(offsets, labels)))
+
+    # Then, we insert the correct hints at each offset, modifying the original offsets as needed
+    for (start, end), label in zip(offsets, labels):
+        # Create the entity hints we will insert
+        left_hint = START_ENT_HINT.format(label.upper()) + " "
+        right_hint = " " + END_ENT_HINT.format(label.upper())
+        # Shift the original character offsets
+        shifted_start = start + right_shift
+        shifted_end = end + right_shift
+        # Add a space in cases where the hints are not already preceeded or proceeded by a space
+        if 0 < shifted_start < len(text) and text[shifted_start - 1] != " ":
+            left_hint = " " + left_hint
+        if shifted_end < len(text) and text[shifted_end] != " ":
+            right_hint = right_hint + " "
+        # Rebuild the text with the entity hints inserted
+        text = (
+            text[:shifted_start]
+            + left_hint
+            + text[shifted_start:shifted_end]
+            + right_hint
+            + text[shifted_end:]
+        )
+        right_shift += len(left_hint) + len(right_hint)
+    pubtator_annotation.text = text
+    return pubtator_annotation
+
+
+def pubtator_to_seq2rel(
+    pubtator_annotations: Dict[str, PubtatorAnnotation], include_ent_hints: bool = False
+) -> List[str]:
     """Converts the highly structed `pubtator_annotations` input to a format that can be used
     with seq2rel.
     """
@@ -205,6 +256,9 @@ def pubtator_to_seq2rel(pubtator_annotations: Dict[str, PubtatorAnnotation]) -> 
     for annotation in pubtator_annotations.values():
         relations = []
         offsets = []
+
+        if include_ent_hints:
+            annotation = insert_ent_hints(annotation)
 
         for rel in annotation.relations:
             uid_1, uid_2, rel_label = rel
