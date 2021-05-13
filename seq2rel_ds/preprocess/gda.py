@@ -70,9 +70,7 @@ def _convert_to_pubtator(abstracts: str, anns: str, labels: str) -> str:
 
 
 def _preprocess(
-    abstracts: str,
-    anns: str,
-    labels: str,
+    abstracts: str, anns: str, labels: str, include_ent_hints: bool = False
 ) -> List[str]:
 
     pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
@@ -80,14 +78,17 @@ def _preprocess(
         pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
     )
 
-    seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations)
+    seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations, include_ent_hints)
 
     return seq2rel_annotations
 
 
-@app.callback(invoke_without_command=True)
+@app.command()
 def main(
-    output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data.")
+    output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
+    include_ent_hints: bool = typer.Option(
+        False, help="Include entity location and type hints in the text"
+    ),
 ) -> None:
     """Download and preprocess the GDA corpus for use with seq2rel."""
     msg.divider("Preprocessing GDA")
@@ -105,10 +106,10 @@ def main(
     msg.good("Downloaded the test data")
 
     with msg.loading("Preprocessing the training data..."):
-        train = _preprocess(train_abstracts, train_anns, train_labels)
+        train = _preprocess(train_abstracts, train_anns, train_labels, include_ent_hints)
     msg.good("Preprocessed the training data")
     with msg.loading("Preprocessing the test data..."):
-        test = _preprocess(test_abstracts, test_anns, test_labels)
+        test = _preprocess(test_abstracts, test_anns, test_labels, include_ent_hints)
     msg.good("Preprocessed the test data")
 
     train, valid = train_test_split(train, test_size=VALID_SIZE)
