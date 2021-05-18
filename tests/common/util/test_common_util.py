@@ -268,10 +268,6 @@ def test_parse_pubtator_compound_ent() -> None:
     assert actual[pmid].relations == expected[pmid].relations
 
 
-def test_parse_pubtator_no_abstract() -> None:
-    pass
-
-
 def test_search_ent() -> None:
     # Entity not in the sentence
     ent = "Waldo"
