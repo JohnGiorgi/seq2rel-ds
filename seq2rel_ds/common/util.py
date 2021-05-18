@@ -75,8 +75,8 @@ def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_la
     """
     formatted_rel = f"@{rel_label.strip().upper()}@"
     for ents, label in zip(ent_clusters, ent_labels):
-        ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
-        formatted_rel += f" {ents} @{label.strip().upper()}@"
+        formatted_ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
+        formatted_rel += f" {formatted_ents} @{label.strip().upper()}@"
     formatted_rel += f" {END_OF_REL_SYMBOL}"
     return formatted_rel
 

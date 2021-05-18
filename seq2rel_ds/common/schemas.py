@@ -13,7 +13,7 @@ class AlignedExample(BaseModel):
 
 class PubtatorCluster(BaseModel):
     ents: List[str]
-    offsets: List[Tuple[int, ...]]
+    offsets: List[Tuple[int, int]]
     label: str
 
 
