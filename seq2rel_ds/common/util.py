@@ -1,7 +1,8 @@
 import random
+import re
 from enum import Enum
 from operator import itemgetter
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
@@ -74,8 +75,8 @@ def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_la
     """
     formatted_rel = f"@{rel_label.strip().upper()}@"
     for ents, label in zip(ent_clusters, ent_labels):
-        ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
-        formatted_rel += f" {ents} @{label.strip().upper()}@"
+        formatted_ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
+        formatted_rel += f" {formatted_ents} @{label.strip().upper()}@"
     formatted_rel += f" {END_OF_REL_SYMBOL}"
     return formatted_rel
 
@@ -120,15 +121,15 @@ def parse_pubtator(
     # Parse the annotations, producing a highly structured output
     parsed = {}
     for article in articles:
+        # Extract the title and abstract (if it exists)
         split_article = article.strip().split("\n")
         title, abstract, annotations = split_article[0], split_article[1], split_article[2:]
         if sort_ents:
             annotations = sort_entity_annotations(annotations)
         pmid, title = title.split("|t|")
         abstract = abstract.split("|a|")[-1]
-        # Some very basic preprocessing
-        title = sanitize_text(title)
-        abstract = sanitize_text(abstract)
+        title = title.strip()
+        abstract = abstract.strip()
 
         # We may want to experiement with different text sources
         if text_segment.value == "both":
@@ -151,9 +152,9 @@ def parse_pubtator(
 
             if len(split_ann) >= 6:
                 if len(split_ann) == 6:
-                    _, start, end, texts, label, uids = split_ann
+                    _, start, end, ents, label, uids = split_ann
                 elif len(split_ann) == 7:
-                    _, start, end, _, label, uids, texts = split_ann
+                    _, start, end, _, label, uids, ents = split_ann
                 start, end = int(start), int(end)  # type: ignore
 
                 # Ignore this annotation if it is not in the chosen text segment
@@ -165,22 +166,35 @@ def parse_pubtator(
                 # individual entities in a compound entity. So we deal with that here.
                 # Note that the start & end indicies will no longer be exactly correct, but are
                 # be close enough for our purposes of sorting entities by order of appearence.
-                texts, uids = texts.split("|"), uids.split("|")  # type: ignore
+                ents, uids = ents.split("|"), uids.split("|")  # type: ignore
+                for ent, uid in zip(ents, uids):
+                    # Ignore this annotation if the entity is not grounded.
+                    # à la: https://www.aclweb.org/anthology/D19-1498/
+                    if uid == "-1":
+                        continue
 
-                for text, uid in zip(texts, uids):
-                    # All entities are lowercased here to simplify the logic downstream.
-                    # They will be lowercased by the copy mechanism anyways.
-                    text = sanitize_text(text, lowercase=True)
+                    # Don't retain duplicate entities
+                    duplicate = uid in parsed[pmid].clusters and ent.lower() in [
+                        ent.lower() for ent in parsed[pmid].clusters[uid].ents
+                    ]
+                    if duplicate:
+                        continue
+
+                    # If this is a compound entity update the offsets to be as correct as possible.
+                    if len(ents) > 1:
+                        match = _search_ent(ent, text[start:end])
+                        adj_start, adj_end = match.span()
+                        adj_start += start
+                        adj_end += start
+                    else:
+                        adj_start, adj_end = start, end
 
                     if uid in parsed[pmid].clusters:
-                        # Don't retain duplicate text...
-                        if text not in parsed[pmid].clusters[uid].ents:
-                            parsed[pmid].clusters[uid].ents.append(text)
-                        # ...but do retain offsets of all mentions
-                        parsed[pmid].clusters[uid].offsets.append((start, end))
+                        parsed[pmid].clusters[uid].ents.append(ent)
+                        parsed[pmid].clusters[uid].offsets.append((adj_start, adj_end))
                     else:
                         parsed[pmid].clusters[uid] = PubtatorCluster(
-                            ents=[text], offsets=[(start, end)], label=label
+                            ents=[ent], offsets=[(adj_start, adj_end)], label=label
                         )
             elif len(split_ann) == 4:  # this is a relation
                 _, label, uid_1, uid_2 = split_ann
@@ -198,50 +212,53 @@ def parse_pubtator(
     return parsed
 
 
+def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
+    """Search for the first occurance of `ent` in `text`, returning an `re.Match` object if found
+    and `None` otherwise.
+    """
+
+    # To match ent to text most accurately, we use a type of "backoff" strategy. First, we look for
+    # the whole entity in text. If we cannot find it, we look for a lazy match of its first and last
+    # tokens. In both cases, we look for whole word matches first (considering word boundaries).
+    match = re.search(fr"\b{re.escape(ent)}\b", text) or re.search(re.escape(ent), text)
+    if not match:
+        ent_split = ent.split()
+        if len(ent_split) > 1:
+            first, last = re.escape(ent_split[0]), re.escape(ent_split[-1])
+            match = re.search(fr"\b{first}.*?{last}\b", text) or re.search(
+                fr"{first}.*?{last}", text
+            )
+    return match
+
+
 def insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnotation:
     """Given a `pubtator annotation`, inserts special tokens to the left and right of each
     entity mention, which serve as hints to the model. This effectively turns the task into
     relation extraction (as opposed to joint entity and relation extraction).
     """
     text = pubtator_annotation.text
-    right_shift = 0  # Running counter that we use to shift the original offsets
-
-    # First, we collect all mentions, offsets and labels, order them by first occurance and
-    # remove duplicate mentions/offsets. This is necessary for the insertion of entity hints.
-    mentions, offsets, labels = [], [], []
-    for relation in pubtator_annotation.relations:
-        clusters = [pubtator_annotation.clusters[uid] for uid in relation[:-1]]
-        for cluster in clusters:
-            for ent, offset in zip(cluster.ents, cluster.offsets):
-                if ent not in mentions and offset not in offsets:
-                    mentions.append(ent)
-                    offsets.append(offset)
-                    labels.append(cluster.label)
-    offsets, labels = zip(*sorted(zip(offsets, labels)))
-
-    # Then, we insert the correct hints at each offset, modifying the original offsets as needed
-    for (start, end), label in zip(offsets, labels):
+    for cluster in pubtator_annotation.clusters.values():
         # Create the entity hints we will insert
-        left_hint = START_ENT_HINT.format(label.upper()) + " "
-        right_hint = " " + END_ENT_HINT.format(label.upper())
-        # Shift the original character offsets
-        shifted_start = start + right_shift
-        shifted_end = end + right_shift
-        # Add a space in cases where the hints are not already preceeded or proceeded by a space
-        if 0 < shifted_start < len(text) and text[shifted_start - 1] != " ":
-            left_hint = " " + left_hint
-        if shifted_end < len(text) and text[shifted_end] != " ":
-            right_hint = right_hint + " "
-        # Rebuild the text with the entity hints inserted
-        text = (
-            text[:shifted_start]
-            + left_hint
-            + text[shifted_start:shifted_end]
-            + right_hint
-            + text[shifted_end:]
-        )
-        right_shift += len(left_hint) + len(right_hint)
-    pubtator_annotation.text = text
+        left_hint = f" {START_ENT_HINT.format(cluster.label.upper())} "
+        right_hint = f" {END_ENT_HINT.format(cluster.label.upper())} "
+        # We insert entity hints by finding the location of their first mention in the text.
+        # This is easier than the alternative (using the offsets from the annotated corpus)
+        # but does run the risk of inserting entity hints at the wrong location. However,
+        # this is likely to be very infrequent.
+        for ent, (start, end) in zip(cluster.ents, cluster.offsets):
+            match = _search_ent(ent, text)
+            if not match:
+                continue
+            start, end = match.span()
+            text = (
+                text[:start].rstrip()
+                + left_hint
+                + text[start:end].strip()
+                + right_hint
+                + text[end:].lstrip()
+            )
+
+    pubtator_annotation.text = text.strip()
     return pubtator_annotation
 
 
