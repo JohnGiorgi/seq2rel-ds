@@ -8,6 +8,135 @@ from hypothesis import given
 from hypothesis.strategies import booleans, text
 from seq2rel_ds.common import schemas, util
 
+# Private functions #
+
+
+def test_search_ent() -> None:
+    # Entity not in the sentence
+    ent = "Waldo"
+    text = "He's not here!"
+    match = util._search_ent(ent, text)
+    assert match is None
+    # A false flag, Waldo appeares within another word before it appears on its own
+    ent = "Waldo"
+    text = "Waldorf is not Waldo"
+    match = util._search_ent(ent, text)
+    assert match.span() == (15, 20)
+    # Check that we can match a compound entity lazily
+    ent = "Waldo and Wally"
+    text = "Waldo said to Wally, and Wally said to Waldo"
+    match = util._search_ent(ent, text)
+    assert match.span() == (0, 19)
+
+
+def test_insert_ent_hints() -> None:
+    """Asserts that insert_ent_hints works as expected for a list of edge cases."""
+    # A truncated example taken from the GDA dataset. It contains a few edge cases:
+    # - coreferent mention
+    # - entites that differ in case
+    # - paranthesized entity
+    # - multiple identical mentions of an entity
+    text = (
+        "Apolipoprotein E epsilon4 allele, elevated midlife total cholesterol level, and high"
+        " midlife systolic blood pressure are independent risk factors for late-life Alzheimer disease."
+        # A + was added to see if the method can handle regex characters in the text
+        " BACKGROUND: Presence of the apolipoprotein E (apoE+) epsilon4 allele, which is involved in"
+        " cholesterol metabolism, is the most important genetic risk factor for Alzheimer disease."
+        " Elevated midlife values for total cholesterol level and blood pressure have been"
+        " implicated recently as risk factors for Alzheimer disease."
+    )
+
+    pubator_annotation = schemas.PubtatorAnnotation(
+        text=text,
+        clusters={
+            # These are out of order on purpose, to ensure the function is insensitive to it
+            "348": schemas.PubtatorCluster(
+                ents=["Apolipoprotein E", "apoE+"], offsets=[(225, 229), (0, 17)], label="Gene"
+            ),
+            "D000544": schemas.PubtatorCluster(
+                ents=["Alzheimer disease"],
+                offsets=[(160, 177), (339, 356), (479, 496)],
+                label="Disease",
+            ),
+        },
+    )
+    expected = copy.deepcopy(pubator_annotation)
+    actual = util._insert_ent_hints(pubator_annotation)
+    expected.text = (
+        "@START_GENE@ Apolipoprotein E ; 0 @END_GENE@ epsilon4 allele, elevated midlife total cholesterol"
+        " level, and high midlife systolic blood pressure are independent risk factors for late-life"
+        " @START_DISEASE@ Alzheimer disease @END_DISEASE@ . BACKGROUND: Presence of the"
+        " apolipoprotein E ( @START_GENE@ apoE+ ; 0 @END_GENE@ ) epsilon4 allele,"
+        " which is involved in cholesterol metabolism, is the most important genetic risk factor for"
+        " Alzheimer disease. Elevated midlife values for total cholesterol level and blood pressure"
+        " have been implicated recently as risk factors for Alzheimer disease."
+    )
+
+    assert actual.text == expected.text
+    assert actual.clusters == expected.clusters
+    assert actual.relations == expected.relations
+
+
+def test_insert_ent_hints_compound() -> None:
+    """Asserts that insert_ent_hints works as expected for compound entities."""
+    text = (
+        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
+        " intrahepatic and extrahepatic cholestasis."
+    )
+    pubator_annotation = schemas.PubtatorAnnotation(
+        text=text,
+        clusters={
+            "D002780": schemas.PubtatorCluster(
+                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
+            ),
+            "D001651": schemas.PubtatorCluster(
+                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
+            ),
+        },
+    )
+    expected = copy.deepcopy(pubator_annotation)
+    actual = util._insert_ent_hints(pubator_annotation)
+    expected.text = (
+        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
+        " @START_DISEASE@ intrahepatic and @START_DISEASE@ extrahepatic cholestasis @END_DISEASE@ @END_DISEASE@ ."
+    )
+    assert actual.text == expected.text
+
+
+def test_insert_ent_hints_overlapping() -> None:
+    """Asserts that insert_ent_hints works as expected for overlapping entities."""
+    text = (
+        # A + was added to see if the method can handle regex characters in the text
+        "Mutation pattern in clinically asymptomatic coagulation factor VII+ deficiency. A total of"
+        " 122 subjects, referred after presurgery screening or checkup for prolonged prothrombin"
+        " time, were characterized for the presence of coagulation factor VII deficiency."
+    )
+    pubator_annotation = schemas.PubtatorAnnotation(
+        text=text,
+        clusters={
+            "2155": schemas.PubtatorCluster(
+                ents=["coagulation factor VII+"], offsets=[(44, 67)], label="Gene"
+            ),
+            "D005168": schemas.PubtatorCluster(
+                ents=["factor VII+ deficiency"], offsets=[(56, 78)], label="Disease"
+            ),
+        },
+    )
+    expected = copy.deepcopy(pubator_annotation)
+    actual = util._insert_ent_hints(pubator_annotation)
+    expected.text = (
+        "Mutation pattern in clinically asymptomatic"
+        " @START_GENE@ coagulation @START_DISEASE@ factor VII+ @END_GENE@ deficiency @END_DISEASE@ ."
+        " A total of 122 subjects, referred after presurgery screening or checkup for prolonged"
+        " prothrombin time, were characterized for the presence of coagulation factor VII deficiency."
+    )
+    assert actual.text == expected.text
+    assert actual.clusters == expected.clusters
+    assert actual.relations == expected.relations
+
+
+# Public functions #
+
 
 def test_set_seeds() -> None:
     # As it turns out, it is quite hard to determine the current random
@@ -54,6 +183,20 @@ def test_sort_by_offset_raise_value_error() -> None:
         _ = util.sort_by_offset(items, offsets)
 
 
+def test_format_relation() -> None:
+    # Add trailing and leading spaces throughout to ensure they are handled.
+    rel_label = "Interaction "
+    ent_clusters = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
+    ent_labels = ["GGP", " GGP", "GGP "]
+    expected = (
+        f"@INTERACTION@ mita ; sting @GGP@ nf-kappab @GGP@ irf3 @GGP@ {util.END_OF_REL_SYMBOL}"
+    )
+    actual = util.format_relation(
+        ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
+    )
+    assert actual == expected
+
+
 def test_train_valid_test_split():
     data = random.sample(range(0, 100), 10)
     train_size, valid_size, test_size = 0.7, 0.1, 0.2
@@ -73,20 +216,6 @@ def test_train_valid_test_split_value_error():
         _, _, _ = util.train_valid_test_split(
             data, train_size=train_size, valid_size=valid_size, test_size=test_size
         )
-
-
-def test_format_relation() -> None:
-    # Add trailing and leading spaces throughout to ensure they are handled.
-    rel_label = "Interaction "
-    ent_clusters = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
-    ent_labels = ["GGP", " GGP", "GGP "]
-    expected = (
-        f"@INTERACTION@ mita ; sting @GGP@ nf-kappab @GGP@ irf3 @GGP@ {util.END_OF_REL_SYMBOL}"
-    )
-    actual = util.format_relation(
-        ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
-    )
-    assert actual == expected
 
 
 def test_parse_pubtator() -> None:
@@ -189,7 +318,7 @@ def test_parse_pubtator() -> None:
     assert actual[pmid].relations == expected[pmid].relations
 
 
-def test_parse_pubtator_raises_value_error() -> None:
+def test_parse_pubtator_skip_malformed_raises_value_error() -> None:
     # A truncated example taken from the BC5CDR dataset
     pmid = "2339463"
     title_text = "Cerebral sinus thrombosis as a potential hazard of antifibrinolytic treatment in menorrhagia."
@@ -208,6 +337,24 @@ def test_parse_pubtator_raises_value_error() -> None:
     # ...and and error when it is False
     with pytest.raises(ValueError):
         _ = util.parse_pubtator(pubtator_content, skip_malformed=False)
+
+
+def test_parse_pubtator_no_abstract_raises_value_error() -> None:
+    # A truncated example taken from the BC5CDR dataset
+    pmid = "2339463"
+    title_text = "Cerebral sinus thrombosis as a potential hazard of antifibrinolytic treatment in menorrhagia."
+    abstract_text = ""
+    pubtator_content = f"""
+    {pmid}|t|{title_text}
+    {pmid}|a|{abstract_text}
+    {pmid}\t0\t25\tCerebral sinus thrombosis\tDisease
+    """
+
+    # A ValueError should be raised if no abstract provided but text_segment is "abstract" or "both"
+    with pytest.raises(ValueError):
+        _ = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.abstract)
+    with pytest.raises(ValueError):
+        _ = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.both)
 
 
 def test_parse_pubtator_compound_ent() -> None:
@@ -266,127 +413,3 @@ def test_parse_pubtator_compound_ent() -> None:
     assert actual[pmid].text == expected[pmid].text
     assert actual[pmid].clusters == expected[pmid].clusters
     assert actual[pmid].relations == expected[pmid].relations
-
-
-def test_search_ent() -> None:
-    # Entity not in the sentence
-    ent = "Waldo"
-    text = "He's not here!"
-    match = util._search_ent(ent, text)
-    assert match is None
-    # A false flag, Waldo appeares within another word before it appears on its own
-    ent = "Waldo"
-    text = "Waldorf is not Waldo"
-    match = util._search_ent(ent, text)
-    assert match.span() == (15, 20)
-    # Check that we can match a compound entity lazily
-    ent = "Waldo and Wally"
-    text = "Waldo said to Wally, and Wally said to Waldo"
-    match = util._search_ent(ent, text)
-    assert match.span() == (0, 19)
-
-
-def test_insert_ent_hints() -> None:
-    """Asserts that insert_ent_hints works as expected for a list of edge cases."""
-    # A truncated example taken from the GDA dataset. It contains a few edge cases:
-    # - coreferent mention
-    # - entites that differ in case
-    # - paranthesized entity
-    # - multiple identical mentions of an entity
-    text = (
-        "Apolipoprotein E epsilon4 allele, elevated midlife total cholesterol level, and high"
-        " midlife systolic blood pressure are independent risk factors for late-life Alzheimer disease."
-        # A + was added to see if the method can handle regex characters in the text
-        " BACKGROUND: Presence of the apolipoprotein E (apoE+) epsilon4 allele, which is involved in"
-        " cholesterol metabolism, is the most important genetic risk factor for Alzheimer disease."
-        " Elevated midlife values for total cholesterol level and blood pressure have been"
-        " implicated recently as risk factors for Alzheimer disease."
-    )
-
-    pubator_annotation = schemas.PubtatorAnnotation(
-        text=text,
-        clusters={
-            # These are out of order on purpose, to ensure the function is insensitive to it
-            "348": schemas.PubtatorCluster(
-                ents=["Apolipoprotein E", "apoE+"], offsets=[(225, 229), (0, 17)], label="Gene"
-            ),
-            "D000544": schemas.PubtatorCluster(
-                ents=["Alzheimer disease"],
-                offsets=[(160, 177), (339, 356), (479, 496)],
-                label="Disease",
-            ),
-        },
-    )
-    expected = copy.deepcopy(pubator_annotation)
-    actual = util.insert_ent_hints(pubator_annotation)
-    expected.text = (
-        "@START_GENE@ Apolipoprotein E ; 0 @END_GENE@ epsilon4 allele, elevated midlife total cholesterol"
-        " level, and high midlife systolic blood pressure are independent risk factors for late-life"
-        " @START_DISEASE@ Alzheimer disease @END_DISEASE@ . BACKGROUND: Presence of the"
-        " apolipoprotein E ( @START_GENE@ apoE+ ; 0 @END_GENE@ ) epsilon4 allele,"
-        " which is involved in cholesterol metabolism, is the most important genetic risk factor for"
-        " Alzheimer disease. Elevated midlife values for total cholesterol level and blood pressure"
-        " have been implicated recently as risk factors for Alzheimer disease."
-    )
-
-    assert actual.text == expected.text
-    assert actual.clusters == expected.clusters
-    assert actual.relations == expected.relations
-
-
-def test_insert_ent_hints_compound() -> None:
-    """Asserts that insert_ent_hints works as expected for compound entities."""
-    text = (
-        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
-        " intrahepatic and extrahepatic cholestasis."
-    )
-    pubator_annotation = schemas.PubtatorAnnotation(
-        text=text,
-        clusters={
-            "D002780": schemas.PubtatorCluster(
-                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
-            ),
-            "D001651": schemas.PubtatorCluster(
-                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
-            ),
-        },
-    )
-    expected = copy.deepcopy(pubator_annotation)
-    actual = util.insert_ent_hints(pubator_annotation)
-    expected.text = (
-        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
-        " @START_DISEASE@ intrahepatic and @START_DISEASE@ extrahepatic cholestasis @END_DISEASE@ @END_DISEASE@ ."
-    )
-    assert actual.text == expected.text
-
-
-def test_insert_ent_hints_overlapping() -> None:
-    """Asserts that insert_ent_hints works as expected for overlapping entities."""
-    text = (
-        # A + was added to see if the method can handle regex characters in the text
-        "Mutation pattern in clinically asymptomatic coagulation factor VII+ deficiency. A total of"
-        " 122 subjects, referred after presurgery screening or checkup for prolonged prothrombin"
-        " time, were characterized for the presence of coagulation factor VII deficiency."
-    )
-    pubator_annotation = schemas.PubtatorAnnotation(
-        text=text,
-        clusters={
-            "2155": schemas.PubtatorCluster(
-                ents=["coagulation factor VII+"], offsets=[(44, 67)], label="Gene"
-            ),
-            "D005168": schemas.PubtatorCluster(
-                ents=["factor VII+ deficiency"], offsets=[(56, 78)], label="Disease"
-            ),
-        },
-    )
-    expected = copy.deepcopy(pubator_annotation)
-    actual = util.insert_ent_hints(pubator_annotation)
-    expected.text = (
-        "Mutation pattern in clinically asymptomatic"
-        " @START_GENE@ coagulation @START_DISEASE@ factor VII+ @END_GENE@ deficiency @END_DISEASE@ ."
-        " A total of 122 subjects, referred after presurgery screening or checkup for prolonged"
-        " prothrombin time, were characterized for the presence of coagulation factor VII deficiency."
-    )
-    assert actual.text == expected.text
-    assert actual.clusters == expected.clusters
-    assert actual.relations == expected.relations
