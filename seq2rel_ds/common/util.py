@@ -23,6 +23,77 @@ class TextSegment(str, Enum):
     both = "both"
 
 
+# Private functions #
+
+
+def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
+    """Search for the first occurance of `ent` in `text`, returning an `re.Match` object if found
+    and `None` otherwise.
+    """
+
+    # To match ent to text most accurately, we use a type of "backoff" strategy. First, we look for
+    # the whole entity in text. If we cannot find it, we look for a lazy match of its first and last
+    # tokens. In both cases, we look for whole word matches first (considering word boundaries).
+    match = re.search(fr"\b{re.escape(ent)}\b", text) or re.search(re.escape(ent), text)
+    if not match:
+        ent_split = ent.split()
+        if len(ent_split) > 1:
+            first, last = re.escape(ent_split[0]), re.escape(ent_split[-1])
+            match = re.search(fr"\b{first}.*?{last}\b", text) or re.search(
+                fr"{first}.*?{last}", text
+            )
+    return match
+
+
+def _sort_entity_annotations(annotations: List[str]) -> List[str]:
+    """Sort PubTator entity annotations by order of first appearence."""
+
+    # We only sort the entities, so we have to seperate them from the relations,
+    # perform the sort and then join everything together.
+    ents = [ann for ann in annotations if len(ann.split("\t")) != 4]
+    rels = [ann for ann in annotations if len(ann.split("\t")) == 4]
+    sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]))
+    return sorted_ents + rels
+
+
+def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnotation:
+    """Given a `pubtator annotation`, inserts special tokens to the left and right of each
+    entity mention, which serve as hints to the model. This effectively turns the task into
+    relation extraction (as opposed to joint entity and relation extraction).
+    """
+    coref_id = 0
+    text = pubtator_annotation.text
+    for cluster in pubtator_annotation.clusters.values():
+        # Create the entity hints we will insert
+        left_hint = f" {START_ENT_HINT.format(cluster.label.upper())} "
+        right_hint = f" {END_ENT_HINT.format(cluster.label.upper())} "
+        if len(set(cluster.ents)) > 1:
+            right_hint = f" ; {coref_id}{right_hint}"
+            coref_id += 1
+        # We insert entity hints by finding the location of their first mention in the text.
+        # This is easier than the alternative (using the offsets from the annotated corpus)
+        # but does run the risk of inserting entity hints at the wrong location. However,
+        # this is likely to be very infrequent.
+        for ent, (start, end) in zip(cluster.ents, cluster.offsets):
+            match = _search_ent(ent, text)
+            if not match:
+                continue
+            start, end = match.span()
+            text = (
+                text[:start].rstrip()
+                + left_hint
+                + text[start:end].strip()
+                + right_hint
+                + text[end:].lstrip()
+            )
+
+    pubtator_annotation.text = text.strip()
+    return pubtator_annotation
+
+
+# Public functions #
+
+
 def set_seeds() -> None:
     """Sets the random seeds of python and numpy for reproducible preprocessing."""
     random.seed(SEED)
@@ -47,6 +118,19 @@ def sort_by_offset(items: List[str], offsets: List[int], **kwargs) -> List[str]:
     return sorted_items
 
 
+def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
+    """Given an arbitrary number of coreferent mentions (`ent_clusters`), a label for each of those
+    mentions (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted string
+    that can be used to train a seq2rel model.
+    """
+    formatted_rel = f"@{rel_label.strip().upper()}@"
+    for ents, label in zip(ent_clusters, ent_labels):
+        formatted_ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
+        formatted_rel += f" {formatted_ents} @{label.strip().upper()}@"
+    formatted_rel += f" {END_OF_REL_SYMBOL}"
+    return formatted_rel
+
+
 def train_valid_test_split(
     data: Iterable[Any],
     train_size: float = 0.7,
@@ -66,30 +150,6 @@ def train_valid_test_split(
     train, test = train_test_split(data, test_size=round(1 - train_size, 4), **kwargs)
     valid, test = train_test_split(test, test_size=test_size / (test_size + valid_size), **kwargs)
     return train, valid, test
-
-
-def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
-    """Given an arbitrary number of coreferent mentions (`ent_clusters`), a label for each of those
-    mentions (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted string
-    that can be used to train a seq2rel model.
-    """
-    formatted_rel = f"@{rel_label.strip().upper()}@"
-    for ents, label in zip(ent_clusters, ent_labels):
-        formatted_ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
-        formatted_rel += f" {formatted_ents} @{label.strip().upper()}@"
-    formatted_rel += f" {END_OF_REL_SYMBOL}"
-    return formatted_rel
-
-
-def sort_entity_annotations(annotations: List[str]) -> List[str]:
-    """Sort PubTator entity annotations by order of first appearence."""
-
-    # We only sort the entities, so we have to seperate them from the relations,
-    # perform the sort and then join everything together.
-    ents = [ann for ann in annotations if len(ann.split("\t")) != 4]
-    rels = [ann for ann in annotations if len(ann.split("\t")) == 4]
-    sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]))
-    return sorted_ents + rels
 
 
 def parse_pubtator(
@@ -125,7 +185,7 @@ def parse_pubtator(
         split_article = article.strip().split("\n")
         title, abstract, annotations = split_article[0], split_article[1], split_article[2:]
         if sort_ents:
-            annotations = sort_entity_annotations(annotations)
+            annotations = _sort_entity_annotations(annotations)
         pmid, title = title.split("|t|")
         abstract = abstract.split("|a|")[-1]
         title = title.strip()
@@ -212,60 +272,6 @@ def parse_pubtator(
     return parsed
 
 
-def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
-    """Search for the first occurance of `ent` in `text`, returning an `re.Match` object if found
-    and `None` otherwise.
-    """
-
-    # To match ent to text most accurately, we use a type of "backoff" strategy. First, we look for
-    # the whole entity in text. If we cannot find it, we look for a lazy match of its first and last
-    # tokens. In both cases, we look for whole word matches first (considering word boundaries).
-    match = re.search(fr"\b{re.escape(ent)}\b", text) or re.search(re.escape(ent), text)
-    if not match:
-        ent_split = ent.split()
-        if len(ent_split) > 1:
-            first, last = re.escape(ent_split[0]), re.escape(ent_split[-1])
-            match = re.search(fr"\b{first}.*?{last}\b", text) or re.search(
-                fr"{first}.*?{last}", text
-            )
-    return match
-
-
-def insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnotation:
-    """Given a `pubtator annotation`, inserts special tokens to the left and right of each
-    entity mention, which serve as hints to the model. This effectively turns the task into
-    relation extraction (as opposed to joint entity and relation extraction).
-    """
-    coref_id = 0
-    text = pubtator_annotation.text
-    for cluster in pubtator_annotation.clusters.values():
-        # Create the entity hints we will insert
-        left_hint = f" {START_ENT_HINT.format(cluster.label.upper())} "
-        right_hint = f" {END_ENT_HINT.format(cluster.label.upper())} "
-        if len(set(cluster.ents)) > 1:
-            right_hint = f" ; {coref_id}{right_hint}"
-            coref_id += 1
-        # We insert entity hints by finding the location of their first mention in the text.
-        # This is easier than the alternative (using the offsets from the annotated corpus)
-        # but does run the risk of inserting entity hints at the wrong location. However,
-        # this is likely to be very infrequent.
-        for ent, (start, end) in zip(cluster.ents, cluster.offsets):
-            match = _search_ent(ent, text)
-            if not match:
-                continue
-            start, end = match.span()
-            text = (
-                text[:start].rstrip()
-                + left_hint
-                + text[start:end].strip()
-                + right_hint
-                + text[end:].lstrip()
-            )
-
-    pubtator_annotation.text = text.strip()
-    return pubtator_annotation
-
-
 def pubtator_to_seq2rel(
     pubtator_annotations: Dict[str, PubtatorAnnotation], include_ent_hints: bool = False
 ) -> List[str]:
@@ -279,7 +285,7 @@ def pubtator_to_seq2rel(
         offsets = []
 
         if include_ent_hints:
-            annotation = insert_ent_hints(annotation)
+            annotation = _insert_ent_hints(annotation)
 
         for rel in annotation.relations:
             uid_1, uid_2, rel_label = rel
