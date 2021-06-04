@@ -236,11 +236,15 @@ def insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnotat
     entity mention, which serve as hints to the model. This effectively turns the task into
     relation extraction (as opposed to joint entity and relation extraction).
     """
+    coref_id = 0
     text = pubtator_annotation.text
     for cluster in pubtator_annotation.clusters.values():
         # Create the entity hints we will insert
         left_hint = f" {START_ENT_HINT.format(cluster.label.upper())} "
         right_hint = f" {END_ENT_HINT.format(cluster.label.upper())} "
+        if len(set(cluster.ents)) > 1:
+            right_hint = f" ; {coref_id}{right_hint}"
+            coref_id += 1
         # We insert entity hints by finding the location of their first mention in the text.
         # This is easier than the alternative (using the offsets from the annotated corpus)
         # but does run the risk of inserting entity hints at the wrong location. However,

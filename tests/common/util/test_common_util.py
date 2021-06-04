@@ -320,10 +320,10 @@ def test_insert_ent_hints() -> None:
     expected = copy.deepcopy(pubator_annotation)
     actual = util.insert_ent_hints(pubator_annotation)
     expected.text = (
-        "@START_GENE@ Apolipoprotein E @END_GENE@ epsilon4 allele, elevated midlife total cholesterol"
+        "@START_GENE@ Apolipoprotein E ; 0 @END_GENE@ epsilon4 allele, elevated midlife total cholesterol"
         " level, and high midlife systolic blood pressure are independent risk factors for late-life"
         " @START_DISEASE@ Alzheimer disease @END_DISEASE@ . BACKGROUND: Presence of the"
-        " apolipoprotein E ( @START_GENE@ apoE+ @END_GENE@ ) epsilon4 allele,"
+        " apolipoprotein E ( @START_GENE@ apoE+ ; 0 @END_GENE@ ) epsilon4 allele,"
         " which is involved in cholesterol metabolism, is the most important genetic risk factor for"
         " Alzheimer disease. Elevated midlife values for total cholesterol level and blood pressure"
         " have been implicated recently as risk factors for Alzheimer disease."
