@@ -260,7 +260,7 @@ def parse_pubtator(
                 _, label, uid_1, uid_2 = split_ann
                 if uid_1 in parsed[pmid].clusters and uid_2 in parsed[pmid].clusters:
                     parsed[pmid].relations.append((uid_1, uid_2, label))
-            # For some cases (like distant supervision) it is convient to
+            # For some cases (like distant supervision) it is convenient to
             # skip annotations that are malformed.
             else:
                 if skip_malformed:
@@ -273,10 +273,25 @@ def parse_pubtator(
 
 
 def pubtator_to_seq2rel(
-    pubtator_annotations: Dict[str, PubtatorAnnotation], include_ent_hints: bool = False
+    pubtator_annotations: Dict[str, PubtatorAnnotation],
+    sort_rels: bool = True,
+    include_ent_hints: bool = False,
 ) -> List[str]:
-    """Converts the highly structed `pubtator_annotations` input to a format that can be used
+    """Converts the highly structured `pubtator_annotations` input to a format that can be used
     with seq2rel.
+
+    # Parameters
+
+    pubtator_annotations : `str`
+        A dictionary, keyed by PMIDs, containing `PubtatorAnnotation` objects to convert to the
+        seq2rel format.
+    sort_rels : bool, optional (default = `True`)
+        Whether relations should be sorted by order of first appearance. This useful for traditional
+        seq2seq models that use an order-sensitive loss function, like negative log-likelihood.
+    include_ent_hints : bool, optional (default = `False`)
+        True if entity markers should be included within the source text. This effectively converts
+        the end-to-end relation extraction problem to a pipeline relation extraction approach, where
+        entities are given.
     """
     seq2rel_annotations = []
 
@@ -289,7 +304,7 @@ def pubtator_to_seq2rel(
 
         for rel in annotation.relations:
             uid_1, uid_2, rel_label = rel
-            # Keep track of the end offsets of each entity. We will use these to sort
+            # Keep track of the end offsets of each entity. If `sort_rels`, will use these to sort
             # relations according to their order of first appearence in the text.
             offset_1 = min((end for _, end in annotation.clusters[uid_1].offsets))
             offset_2 = min((end for _, end in annotation.clusters[uid_2].offsets))
@@ -304,7 +319,13 @@ def pubtator_to_seq2rel(
             relations.append(relation)
             offsets.append(offset)
 
-        relations = sort_by_offset(relations, offsets)
+        if sort_rels:
+            relations = sort_by_offset(relations, offsets)
+        # This option mainly exists for the purposes of ablation.
+        # To make this clearer, shuffle relations in random order if `sort_rels` is False.
+        else:
+            random.shuffle(relations)
+
         seq2rel_annotations.append(f"{annotation.text}\t{' '.join(relations)}")
 
     return seq2rel_annotations
