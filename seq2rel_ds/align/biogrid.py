@@ -1,21 +1,14 @@
 import json
 import re
-from math import ceil
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import pandas as pd
 import typer
-from more_itertools import chunked
 from seq2rel_ds import msg
 from seq2rel_ds.align.util import query_pubtator
 from seq2rel_ds.common.schemas import AlignedExample, PydanticEncoder, as_pubtator_annotation
-from seq2rel_ds.common.util import (
-    TextSegment,
-    format_relation,
-    sanitize_text,
-    sort_by_offset,
-)
+from seq2rel_ds.common.util import TextSegment, format_relation, sanitize_text, sort_by_offset
 
 app = typer.Typer()
 
@@ -24,11 +17,19 @@ ENTREZGENE_INTERACTOR_A = "Entrez Gene Interactor A"
 ENTREZGENE_INTERACTOR_B = "Entrez Gene Interactor B"
 EXPERIMENTAL_SYSTEM_TYPE = "Experimental System Type"
 PUBLICATION_SOURCE = "Publication Source"
+ORGANISM_ID_INTERACTOR_A = "Organism ID Interactor A"
+ORGANISM_ID_INTERACTOR_B = "Organism ID Interactor B"
+ORGANISM_NAME_INTERACTOR_A = "Organism Name Interactor A"
+ORGANISM_NAME_INTERACTOR_B = "Organism Name Interactor B"
 BIOGRID_COLS = {
     ENTREZGENE_INTERACTOR_A: pd.StringDtype(),
     ENTREZGENE_INTERACTOR_B: pd.StringDtype(),
     EXPERIMENTAL_SYSTEM_TYPE: pd.StringDtype(),
     PUBLICATION_SOURCE: pd.StringDtype(),
+    ORGANISM_ID_INTERACTOR_A: pd.StringDtype(),
+    ORGANISM_ID_INTERACTOR_B: pd.StringDtype(),
+    ORGANISM_NAME_INTERACTOR_A: pd.StringDtype(),
+    ORGANISM_NAME_INTERACTOR_B: pd.StringDtype(),
 }
 
 # Any hardcoded filenames should go here
@@ -36,11 +37,7 @@ ANNOTATIONS_FN = "annotations.json"
 BIOGRID_FN = "biogrid.tsv"
 
 # Any hardcoded entity or relation labels should go here
-GGP = "GGP"
-
-# This is the number of PMIDs per request allowed by pubtators webservice.
-# See: https://www.ncbi.nlm.nih.gov/research/pubtator/api.html for details.
-PMIDS_PER_REQUEST = 1000
+REL_LABEL = "GGP"
 
 
 def _load_biogrid(biogrid_path_or_url: str) -> pd.DataFrame:
@@ -51,7 +48,6 @@ def _load_biogrid(biogrid_path_or_url: str) -> pd.DataFrame:
 def _align(
     input_dir: Path,
     output_fp: Optional[Path] = None,
-    text_segment: TextSegment = TextSegment.abstract,
     max_instances: Optional[int] = None,
     pmid_whitelist: Optional[List[str]] = None,
 ) -> Dict[str, AlignedExample]:
@@ -104,7 +100,7 @@ def _align(
                     ent_clusters = sort_by_offset(
                         [interactor_a.ents, interactor_b.ents], [offset_a, offset_b]
                     )
-                    ent_labels = [GGP] * len(ent_clusters)
+                    ent_labels = [REL_LABEL] * len(ent_clusters)
                     relation = format_relation(
                         ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
                     )
@@ -186,7 +182,7 @@ def preprocess(
         help="A path on disk (or URL) to a tab delineated (*.tab3) BioGRID release",
     ),
     text_segment: TextSegment = typer.Option(
-        TextSegment.abstract, help="Whether to use title text, abstract text, or both"
+        TextSegment.both, help="Whether to use title text, abstract text, or both"
     ),
 ) -> None:
 
@@ -200,8 +196,10 @@ def preprocess(
     # Filter anything without a PMID
     df = df[df[PUBLICATION_SOURCE].str.contains("PUBMED")]
     num_records = len(df)
-    # Remove duplicates as these cause problems downstream. Often, these are
-    # the same interaction identified by different experimental systems.
+    # Remove duplicates as these cause problems downstream. Often, these are the same
+    # interaction identified by different experimental systems, or the same interactors
+    # with opposite directionality.
+    # See https://wiki.thebiogrid.org/doku.php/statistics for more details.
     df = df.drop_duplicates()
     msg.info(f"Dropped {num_records - len(df)} ({1 - len(df)/num_records:.2%}) duplicates")
     # Get all unique PMIDs in the dataframe.
@@ -209,15 +207,15 @@ def preprocess(
     msg.info(f"Found {len(pmids)} unique PMIDs in the BioGRID release")
 
     # Get the PubTator results for all PMIDs in the dataframe
-    annotations = {}
-    total_results = ceil(len(pmids) / PMIDS_PER_REQUEST)
-    with typer.progressbar(length=total_results, label="Fetching PubTator annotations") as progress:
-        for pmids_ in chunked(pmids, PMIDS_PER_REQUEST):
-            annotation = query_pubtator(
-                pmids_, concepts=["gene"], text_segment=text_segment, skip_malformed=True
-            )
-            annotations.update(annotation)
-            progress.update(1)
+    with msg.loading("Fetching PubTator annotations..."):
+        annotations = query_pubtator(
+            pmids,
+            concepts=["gene"],
+            text_segment=text_segment,
+            sort_ents=True,
+            skip_malformed=True,
+        )
+    msg.good("Fetched PubTator annotations")
 
     annotations_fp = output_dir / ANNOTATIONS_FN
     biogrid_fp = output_dir / BIOGRID_FN
@@ -228,7 +226,7 @@ def preprocess(
     msg.good(f"Saved preprocessed BioGRID release to: {biogrid_fp}")
 
 
-@app.callback(invoke_without_command=True)
+@app.command()
 def main(
     input_dir: str = typer.Argument(..., help="Directory containing the preprocessed data"),
     output_dir: str = typer.Argument(..., help="Directory to save the resulting data"),
