@@ -1,6 +1,7 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
+from more_itertools import chunked
 from requests.adapters import HTTPAdapter
 from seq2rel_ds.common import util
 from seq2rel_ds.common.schemas import PubtatorAnnotation
@@ -21,8 +22,15 @@ retries = Retry(total=5, backoff_factor=0.1)
 s.mount("https://", HTTPAdapter(max_retries=retries))
 
 
+def _query_pubtator(body: Dict[str, Any], **kwargs):
+    r = s.post(PUBTATOR_API_URL, json=body)
+    pubtator_content = r.text.strip()
+    pubtator_annotations = util.parse_pubtator(pubtator_content, **kwargs)
+    return pubtator_annotations
+
+
 def query_pubtator(
-    pmids: List[str], concepts: Optional[List[str]] = None, **kwargs
+    pmids: List[str], concepts: Optional[List[str]] = None, pmids_per_request: int = 1000, **kwargs
 ) -> Dict[str, PubtatorAnnotation]:
     """Queries PubTator for the given `pmids` and `concepts`, parses the results and
     returns a highly structured dictionary-like object keyed by PMID. `**kwargs` are passed to
@@ -36,10 +44,18 @@ def query_pubtator(
     concepts : `List[str]`, optional (default = `None`)
         A list of concepts to include in the PubTator results.
     """
-    body = {"pmids": pmids}
+    body = {}
     if concepts is not None:
         body["concepts"] = concepts
-    r = s.post(PUBTATOR_API_URL, json=body)
-    pubtator_content = r.text.strip()
-    annotations = util.parse_pubtator(pubtator_content, **kwargs)
+    annotations = {}
+    for chunk in chunked(pmids, pmids_per_request):
+        # Try to post requests in chunks to speed things up...
+        try:
+            body["pmids"] = chunk
+            pubtator_annotations = _query_pubtator(body, **kwargs)
+            annotations.update(pubtator_annotations)
+        # ...but, if the request fails, recursively half the size of the request.
+        except requests.exceptions.ConnectionError:
+            pubtator_annotations = query_pubtator(chunk, concepts, pmids_per_request // 2, **kwargs)
+            annotations.update(pubtator_annotations)
     return annotations
