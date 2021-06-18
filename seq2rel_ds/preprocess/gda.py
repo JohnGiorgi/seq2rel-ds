@@ -131,3 +131,7 @@ def main(
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
     msg.good(f"Preprocessed data saved to {output_dir.resolve()}")
+
+
+if __name__ == "__main__":
+    app()

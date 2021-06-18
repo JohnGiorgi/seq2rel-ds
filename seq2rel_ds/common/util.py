@@ -56,10 +56,11 @@ def _sort_entity_annotations(annotations: List[str]) -> List[str]:
     return sorted_ents + rels
 
 
-def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnotation:
+def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> str:
     """Given a `pubtator annotation`, inserts special tokens to the left and right of each
     entity mention, which serve as hints to the model. This effectively turns the task into
-    relation extraction (as opposed to joint entity and relation extraction).
+    relation extraction (as opposed to joint entity and relation extraction). Returns the text
+    with the inserted entity hints.
     """
     coref_id = 0
     text = pubtator_annotation.text
@@ -87,8 +88,7 @@ def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> PubtatorAnnota
                 + text[end:].lstrip()
             )
 
-    pubtator_annotation.text = text.strip()
-    return pubtator_annotation
+    return text.strip()
 
 
 # Public functions #
@@ -113,7 +113,7 @@ def sort_by_offset(items: List[str], offsets: List[int], **kwargs) -> List[str]:
         raise ValueError(f"len(items) ({len(items)}) != len(offsets) ({len(offsets)})")
     packed = list(zip(items, offsets))
     packed = sorted(packed, key=itemgetter(1), **kwargs)
-    sorted_items, _ = zip(*packed)
+    sorted_items, _ = list(zip(*packed))
     sorted_items = list(sorted_items)
     return sorted_items
 
@@ -300,7 +300,7 @@ def pubtator_to_seq2rel(
         offsets = []
 
         if include_ent_hints:
-            annotation = _insert_ent_hints(annotation)
+            annotation.text = _insert_ent_hints(annotation)
 
         for rel in annotation.relations:
             uid_1, uid_2, rel_label = rel
@@ -319,10 +319,10 @@ def pubtator_to_seq2rel(
             relations.append(relation)
             offsets.append(offset)
 
-        if sort_rels:
-            relations = sort_by_offset(relations, offsets)
         # This option mainly exists for the purposes of ablation.
         # To make this clearer, shuffle relations in random order if `sort_rels` is False.
+        if relations and sort_rels:
+            relations = sort_by_offset(relations, offsets)
         else:
             random.shuffle(relations)
 

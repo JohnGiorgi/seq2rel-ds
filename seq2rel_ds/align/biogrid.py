@@ -8,7 +8,7 @@ import typer
 from seq2rel_ds import msg
 from seq2rel_ds.align.util import query_pubtator
 from seq2rel_ds.common.schemas import AlignedExample, PydanticEncoder, as_pubtator_annotation
-from seq2rel_ds.common.util import TextSegment, format_relation, sanitize_text, sort_by_offset
+from seq2rel_ds.common.util import TextSegment, pubtator_to_seq2rel, sanitize_text, sort_by_offset
 
 app = typer.Typer()
 
@@ -50,6 +50,8 @@ def _align(
     output_fp: Optional[Path] = None,
     max_instances: Optional[int] = None,
     pmid_whitelist: Optional[List[str]] = None,
+    sort_rels: bool = True,
+    include_ent_hints: bool = False,
 ) -> Dict[str, AlignedExample]:
     msg.divider("Alignment")
 
@@ -78,45 +80,37 @@ def _align(
 
     alignments = {}
     with typer.progressbar(length=max_instances, label="Aligning") as progress:
-        for i, pmid in enumerate(pmids):
-
-            rows = df[df[PUBLICATION_SOURCE] == f"PUBMED:{pmid}"]
+        for pmid in pmids:
             annotation = annotations[pmid]
-
-            relations = []
-            offsets = []
+            rows = df[df[PUBLICATION_SOURCE] == f"PUBMED:{pmid}"]
             for _, row in rows.iterrows():
                 rel_label = row[EXPERIMENTAL_SYSTEM_TYPE]
-                interactor_a = annotation.clusters.get(row[ENTREZGENE_INTERACTOR_A], [])
-                interactor_b = annotation.clusters.get(row[ENTREZGENE_INTERACTOR_B], [])
-
+                interactor_a, interactor_b = (
+                    row[ENTREZGENE_INTERACTOR_A],
+                    row[ENTREZGENE_INTERACTOR_B],
+                )
+                cluster_a = annotation.clusters.get(interactor_a, [])
+                cluster_b = annotation.clusters.get(interactor_b, [])
                 # If we have a hit for both interactors, accumulate the annotation
-                if interactor_a and interactor_b:
-                    # Keep track of end offsets. We will use these to sort entities and relations
-                    # according to their order of first appearence in the text.
-                    offset_a = min(end for _, end in interactor_a.offsets)
-                    offset_b = min(end for _, end in interactor_b.offsets)
-                    offset = offset_a + offset_b
-                    ent_clusters = sort_by_offset(
-                        [interactor_a.ents, interactor_b.ents], [offset_a, offset_b]
+                if cluster_a and cluster_b:
+                    offset_a = min(end for _, end in cluster_a.offsets)
+                    offset_b = min(end for _, end in cluster_b.offsets)
+                    interactor_a, interactor_b = sort_by_offset(
+                        [interactor_a, interactor_b], [offset_a, offset_b]
                     )
-                    ent_labels = [REL_LABEL] * len(ent_clusters)
-                    relation = format_relation(
-                        ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
-                    )
-                    # Don't accumulate identical relations
-                    if relation not in relations:
-                        relations.append(relation)
-                        offsets.append(offset)
+                    relation = (interactor_a, interactor_b, rel_label)
+                    if relation not in annotation.relations:
+                        annotation.relations.append(relation)
 
-            if relations:
-                # Sort the relations by order of first appearence
-                relations = sort_by_offset(relations, offsets)
+            if annotation.relations:
                 # Score the alignment as the fraction of BioGRID interactions we found
-                score = len(relations) / len(rows)
+                score = len(annotation.relations) / len(rows)
+                text, relations = pubtator_to_seq2rel(
+                    {pmid: annotation}, sort_rels=sort_rels, include_ent_hints=include_ent_hints
+                )[0].split("\t")
 
                 aligned_example = AlignedExample(
-                    doc_id=pmid, text=annotation.text, relations=" ".join(relations), score=score
+                    doc_id=pmid, text=text, relations=relations, score=score
                 )
                 if output_fp is not None:
                     with open(output_fp, "a") as f:
@@ -215,7 +209,7 @@ def preprocess(
             sort_ents=True,
             skip_malformed=True,
         )
-    msg.good("Fetched PubTator annotations")
+    msg.good(f"Fetched {len(annotations)} PubTator annotations")
 
     annotations_fp = output_dir / ANNOTATIONS_FN
     biogrid_fp = output_dir / BIOGRID_FN
@@ -233,6 +227,8 @@ def main(
     max_instances: int = typer.Option(
         None, help="The maximum number of PMIDs to produce alignments for."
     ),
+    sort_rels: bool = typer.Option(True),
+    include_ent_hints: bool = typer.Option(False),
 ) -> None:
     """Use BioGRID to create data for distantly supervised learning with seq2rel."""
 
@@ -240,6 +236,8 @@ def main(
         input_dir=input_dir,
         output_fp=output_dir,
         max_instances=max_instances,
+        sort_rels=sort_rels,
+        include_ent_hints=include_ent_hints,
     )
 
 
