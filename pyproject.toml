@@ -33,8 +33,12 @@ more-itertools = "^8.7.0"
 pandas = "^1.2.1"
 typer = "^0.3.2"
 wasabi = "^0.8.2"
-pydantic = "^1.8.1"
+# Have to pin this to avoid a conflict with spacy
+pydantic = ">=1.7.1,<1.8.0"
 scikit-learn = "^0.24.1"
+# ScispaCy and its pretrained models are only required for pipeline-based entity hinting
+scispacy = { version = "^0.4.0", optional = true }
+en-ner-bc5cdr-md = {url = "https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.4.0/en_ner_bc5cdr_md-0.4.0.tar.gz", optional = true}
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
@@ -46,6 +50,9 @@ hypothesis = "^6.9.1"
 mypy = "^0.812"
 pytest = "^5.2"
 pytest-cov = "^2.11.1"
+
+[tool.poetry.extras]
+scispacy = ["scispacy", "en-ner-bc5cdr-md"]
 
 [tool.poetry.scripts]
 seq2rel-ds = "seq2rel_ds.main:app"
