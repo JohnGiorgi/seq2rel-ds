@@ -60,9 +60,7 @@ def test_insert_ent_hints() -> None:
             ),
         },
     )
-    expected = copy.deepcopy(pubator_annotation)
-    actual = util._insert_ent_hints(pubator_annotation)
-    expected.text = (
+    expected = (
         "@START_GENE@ Apolipoprotein E ; 0 @END_GENE@ epsilon4 allele, elevated midlife total cholesterol"
         " level, and high midlife systolic blood pressure are independent risk factors for late-life"
         " @START_DISEASE@ Alzheimer disease @END_DISEASE@ . BACKGROUND: Presence of the"
@@ -71,10 +69,9 @@ def test_insert_ent_hints() -> None:
         " Alzheimer disease. Elevated midlife values for total cholesterol level and blood pressure"
         " have been implicated recently as risk factors for Alzheimer disease."
     )
+    actual = util._insert_ent_hints(pubator_annotation)
 
-    assert actual.text == expected.text
-    assert actual.clusters == expected.clusters
-    assert actual.relations == expected.relations
+    assert actual == expected
 
 
 def test_insert_ent_hints_compound() -> None:
@@ -94,13 +91,12 @@ def test_insert_ent_hints_compound() -> None:
             ),
         },
     )
-    expected = copy.deepcopy(pubator_annotation)
-    actual = util._insert_ent_hints(pubator_annotation)
-    expected.text = (
+    expected = (
         "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
         " @START_DISEASE@ intrahepatic and @START_DISEASE@ extrahepatic cholestasis @END_DISEASE@ @END_DISEASE@ ."
     )
-    assert actual.text == expected.text
+    actual = util._insert_ent_hints(pubator_annotation)
+    assert actual == expected
 
 
 def test_insert_ent_hints_overlapping() -> None:
@@ -122,17 +118,38 @@ def test_insert_ent_hints_overlapping() -> None:
             ),
         },
     )
-    expected = copy.deepcopy(pubator_annotation)
-    actual = util._insert_ent_hints(pubator_annotation)
-    expected.text = (
+    expected = (
         "Mutation pattern in clinically asymptomatic"
         " @START_GENE@ coagulation @START_DISEASE@ factor VII+ @END_GENE@ deficiency @END_DISEASE@ ."
         " A total of 122 subjects, referred after presurgery screening or checkup for prolonged"
         " prothrombin time, were characterized for the presence of coagulation factor VII deficiency."
     )
-    assert actual.text == expected.text
-    assert actual.clusters == expected.clusters
-    assert actual.relations == expected.relations
+    actual = util._insert_ent_hints(pubator_annotation)
+    assert actual == expected
+
+
+def test_insert_ent_hints_no_mutation() -> None:
+    """Asserts that insert_ent_hints does not mutate the PubtatorAnnotation object."""
+    text = (
+        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
+        " intrahepatic and extrahepatic cholestasis."
+    )
+    pubator_annotation = schemas.PubtatorAnnotation(
+        text=text,
+        clusters={
+            "D002780": schemas.PubtatorCluster(
+                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
+            ),
+            "D001651": schemas.PubtatorCluster(
+                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
+            ),
+        },
+    )
+    expected = copy.deepcopy(pubator_annotation)
+    _ = util._insert_ent_hints(pubator_annotation)
+    assert pubator_annotation.text == expected.text
+    assert pubator_annotation.clusters == expected.clusters
+    assert pubator_annotation.relations == expected.relations
 
 
 # Public functions #
