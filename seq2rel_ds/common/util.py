@@ -109,7 +109,7 @@ def _load_scispacy(model_name: str):
         nlp = spacy.load(model_name)
     except OSError:
         raise ValueError(
-            f"Couldn't find ScispaCy model {model_name}. Following the instructions here:"
+            f"Couldn't find ScispaCy model {model_name}. Follow the instructions here:"
             " https://allenai.github.io/scispacy/ to install"
         )
     nlp.add_pipe("abbreviation_detector")
@@ -366,14 +366,14 @@ def pubtator_to_seq2rel(
                 annotation.text = _insert_ent_hints(annotation)
 
         for rel in annotation.relations:
-            uid_1, uid_2, rel_label = rel
-            # Keep track of the end offsets of each entity. If `sort_rels`, will use these to sort
-            # relations according to their order of first appearence in the text.
-            offset_1 = min((end for _, end in annotation.clusters[uid_1].offsets))
-            offset_2 = min((end for _, end in annotation.clusters[uid_2].offsets))
-            offset = offset_1 + offset_2
-            ent_clusters = [annotation.clusters[uid_1].ents, annotation.clusters[uid_2].ents]
-            ent_labels = [annotation.clusters[uid_1].label, annotation.clusters[uid_2].label]
+            ent_ids, rel_label = rel[:-1], rel[-1]
+            # If `sort_rels`, we will sort relations in order of first appearance.
+            # To determine order, use the sum of the min end offsets of each cluster.
+            offset = sum(
+                min(annotation.clusters[id_].offsets, key=itemgetter(1))[1] for id_ in ent_ids
+            )
+            ent_clusters = [annotation.clusters[id_].ents for id_ in ent_ids]
+            ent_labels = [annotation.clusters[id_].label for id_ in ent_ids]
             relation = format_relation(
                 ent_clusters=ent_clusters,
                 ent_labels=ent_labels,
