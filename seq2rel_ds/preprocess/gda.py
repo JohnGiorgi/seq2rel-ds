@@ -126,7 +126,7 @@ def main(
     include_ent_hints = False
     if entity_hinting == EntityHinting.pipeline:
         raise NotImplementedError(
-            "pipeline entity hinting is not yet implemented for the GDA corpus."
+            "pipeline entity hinting is not implemented for the GDA corpus."
             ' Please use "gold" or "none"'
         )
     elif entity_hinting == EntityHinting.gold:
