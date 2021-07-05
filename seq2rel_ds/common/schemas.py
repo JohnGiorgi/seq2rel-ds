@@ -12,12 +12,18 @@ class AlignedExample(BaseModel):
 
 
 class PubtatorCluster(BaseModel):
+    """A Pydantic model for storing coreferent entity annotations."""
+
     ents: List[str]
     offsets: List[Tuple[int, int]]
     label: str
 
 
 class PubtatorAnnotation(BaseModel):
+    """A Pydantic model for storing relation annotations. The last item in `relations` is the
+    class label.
+    """
+
     text: str
     clusters: Dict[str, PubtatorCluster] = {}
     relations: List[Tuple[str, ...]] = []
