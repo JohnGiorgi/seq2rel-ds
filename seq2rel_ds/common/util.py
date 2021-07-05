@@ -2,7 +2,7 @@ import random
 import re
 from enum import Enum
 from operator import itemgetter
-from typing import Any, Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Tuple, Union, Optional
 
 import numpy as np
 from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
@@ -89,6 +89,54 @@ def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> str:
             )
 
     return text.strip()
+
+
+def _load_scispacy(model_name: str):
+    """Load the ScispaCy model `model_name`. Additionally adds the `AbbreviationDetector` and
+    `EntityLinker` pipes to the returned model.
+    """
+    try:
+        import spacy
+        import scispacy  # noqa
+        from scispacy.abbreviation import AbbreviationDetector  # noqa
+        from scispacy.linking import EntityLinker  # noqa
+    except ImportError:
+        raise ValueError(
+            'ScispaCy is not installed. Please install seq2rel-ds with extras "scispacy"'
+        )
+
+    try:
+        nlp = spacy.load(model_name)
+    except OSError:
+        raise ValueError(
+            f"Couldn't find ScispaCy model {model_name}. Follow the instructions here:"
+            " https://allenai.github.io/scispacy/ to install"
+        )
+    nlp.add_pipe("abbreviation_detector")
+    nlp.add_pipe("scispacy_linker", config={"resolve_abbreviations": True, "linker_name": "umls"})
+    return nlp
+
+
+def _annotate_scispacy(text: str, nlp):
+    """Annotate `text` with the ScispaCy model `nlp` and return a `PubtatorAnnotation` instance."""
+    annotation = PubtatorAnnotation(text=text)
+    doc = nlp(text)
+    for ent in doc.ents:
+        if not ent._.kb_ents:
+            continue
+        uid = ent._.kb_ents[0]
+        mention = ent.text.lower()
+        offset = (ent.start_char, ent.end_char)
+        label = ent.label_
+        if uid in annotation.clusters:
+            if mention not in annotation.clusters[uid].ents:
+                annotation.clusters[uid].ents.append(mention)
+                annotation.clusters[uid].offsets.append(offset)
+        else:
+            annotation.clusters[uid] = PubtatorCluster(
+                ents=[mention], offsets=[offset], label=label
+            )
+    return annotation
 
 
 # Public functions #
@@ -276,6 +324,7 @@ def pubtator_to_seq2rel(
     pubtator_annotations: Dict[str, PubtatorAnnotation],
     sort_rels: bool = True,
     include_ent_hints: bool = False,
+    scispacy_model: Optional[str] = None,
 ) -> List[str]:
     """Converts the highly structured `pubtator_annotations` input to a format that can be used
     with seq2rel.
@@ -292,25 +341,39 @@ def pubtator_to_seq2rel(
         True if entity markers should be included within the source text. This effectively converts
         the end-to-end relation extraction problem to a pipeline relation extraction approach, where
         entities are given.
+    scispacy_model : str, optional (default = `None`)
+        If provided, the predictions of this ScispaCy model will be used to determine the entity
+        hints (as opposed to the annotations in `pubtator_annotations`). Has no effect if
+        `include_ent_hints` is `False`.
     """
     seq2rel_annotations = []
+
+    if include_ent_hints and scispacy_model:
+        nlp = _load_scispacy(scispacy_model)
 
     for annotation in pubtator_annotations.values():
         relations = []
         offsets = []
 
         if include_ent_hints:
-            annotation.text = _insert_ent_hints(annotation)
+            # If the user provided a scispacy_model, we create our entity hints using its
+            # predictions. This functionality exists to mimic pipeline-based setup, where
+            # existing NER and NEL models are used to label the data before applying the RE model.
+            if scispacy_model:
+                scispacy_annotation = _annotate_scispacy(annotation.text, nlp)
+                annotation.text = _insert_ent_hints(scispacy_annotation)
+            else:
+                annotation.text = _insert_ent_hints(annotation)
 
         for rel in annotation.relations:
-            uid_1, uid_2, rel_label = rel
-            # Keep track of the end offsets of each entity. If `sort_rels`, will use these to sort
-            # relations according to their order of first appearence in the text.
-            offset_1 = min((end for _, end in annotation.clusters[uid_1].offsets))
-            offset_2 = min((end for _, end in annotation.clusters[uid_2].offsets))
-            offset = offset_1 + offset_2
-            ent_clusters = [annotation.clusters[uid_1].ents, annotation.clusters[uid_2].ents]
-            ent_labels = [annotation.clusters[uid_1].label, annotation.clusters[uid_2].label]
+            ent_ids, rel_label = rel[:-1], rel[-1]
+            # If `sort_rels`, we will sort relations in order of first appearance.
+            # To determine order, use the sum of the min end offsets of each cluster.
+            offset = sum(
+                min(annotation.clusters[id_].offsets, key=itemgetter(1))[1] for id_ in ent_ids
+            )
+            ent_clusters = [annotation.clusters[id_].ents for id_ in ent_ids]
+            ent_labels = [annotation.clusters[id_].label for id_ in ent_ids]
             relation = format_relation(
                 ent_clusters=ent_clusters,
                 ent_labels=ent_labels,

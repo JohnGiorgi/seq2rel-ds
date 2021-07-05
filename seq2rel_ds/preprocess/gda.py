@@ -5,6 +5,7 @@ import requests
 import typer
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
+from seq2rel_ds.preprocess.util import EntityHinting
 from sklearn.model_selection import train_test_split
 
 app = typer.Typer()
@@ -106,6 +107,14 @@ def main(
     include_ent_hints: bool = typer.Option(
         False, help="Include entity location and type hints in the text"
     ),
+    entity_hinting: EntityHinting = typer.Option(
+        EntityHinting.none,
+        help=(
+            'Entity hinting strategy. Pass "gold" to use the gold standard annotations, "pipeline"'
+            ' to use annotations predicted by a pretrained model, and "none" to not include entity hints.'
+        ),
+        case_sensitive=False,
+    ),
 ) -> None:
     """Download and preprocess the GDA corpus for use with seq2rel."""
     msg.divider("Preprocessing GDA")
@@ -113,6 +122,16 @@ def main(
     with msg.loading("Downloading corpus..."):
         train_raw, test_raw = _download_corpus()
     msg.good("Downloaded the corpus")
+
+    include_ent_hints = False
+    if entity_hinting == EntityHinting.pipeline:
+        raise NotImplementedError(
+            "pipeline entity hinting is not implemented for the GDA corpus."
+            ' Please use "gold" or "none"'
+        )
+    elif entity_hinting == EntityHinting.gold:
+        include_ent_hints = True
+        msg.info("Entity hints will be inserted into the source text using the gold annotations.")
 
     with msg.loading("Preprocessing the training data..."):
         train = _preprocess(*train_raw, include_ent_hints)
