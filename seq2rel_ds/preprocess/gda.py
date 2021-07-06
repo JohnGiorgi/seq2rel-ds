@@ -104,8 +104,8 @@ def _preprocess(
 @app.command()
 def main(
     output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
-    include_ent_hints: bool = typer.Option(
-        False, help="Include entity location and type hints in the text"
+    sort_rels: bool = typer.Option(
+        True, help="Sort relations according to order of first appearance."
     ),
     entity_hinting: EntityHinting = typer.Option(
         EntityHinting.none,
@@ -134,10 +134,10 @@ def main(
         msg.info("Entity hints will be inserted into the source text using the gold annotations.")
 
     with msg.loading("Preprocessing the training data..."):
-        train = _preprocess(*train_raw, include_ent_hints)
+        train = _preprocess(*train_raw, sort_rels=sort_rels, include_ent_hints=include_ent_hints)
     msg.good("Preprocessed the training data")
     with msg.loading("Preprocessing the test data..."):
-        test = _preprocess(*test_raw, include_ent_hints)
+        test = _preprocess(*test_raw, sort_rels=sort_rels, include_ent_hints=include_ent_hints)
     msg.good("Preprocessed the test data")
 
     train, valid = train_test_split(train, test_size=VALID_SIZE)
