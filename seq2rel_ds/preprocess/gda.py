@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import requests
 import typer
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
-from seq2rel_ds.preprocess.util import EntityHinting
+from seq2rel_ds.common.util import EntityHinting
 from sklearn.model_selection import train_test_split
 
 app = typer.Typer()
@@ -86,8 +86,13 @@ def _convert_to_pubtator(abstracts: str, anns: str, labels: str) -> str:
 
 
 def _preprocess(
-    abstracts: str, anns: str, labels: str, sort_rels: bool = True, include_ent_hints: bool = False
+    abstracts: str,
+    anns: str,
+    labels: str,
+    sort_rels: bool = True,
+    entity_hinting: Optional[EntityHinting] = None,
 ) -> List[str]:
+    kwargs = {"concepts": ["Gene", "Disease"]} if entity_hinting else {}
 
     pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
     pubtator_annotations = util.parse_pubtator(
@@ -95,7 +100,7 @@ def _preprocess(
     )
 
     seq2rel_annotations = util.pubtator_to_seq2rel(
-        pubtator_annotations, sort_rels=sort_rels, include_ent_hints=include_ent_hints
+        pubtator_annotations, sort_rels=sort_rels, entity_hinting=entity_hinting, **kwargs
     )
 
     return seq2rel_annotations
@@ -108,10 +113,10 @@ def main(
         False, help="Include entity location and type hints in the text"
     ),
     entity_hinting: EntityHinting = typer.Option(
-        EntityHinting.none,
+        None,
         help=(
             'Entity hinting strategy. Pass "gold" to use the gold standard annotations, "pipeline"'
-            ' to use annotations predicted by a pretrained model, and "none" to not include entity hints.'
+            " to use annotations predicted by a pretrained model, or omit it to not include entity hints."
         ),
         case_sensitive=False,
     ),
@@ -123,14 +128,11 @@ def main(
         train_raw, test_raw = _download_corpus()
     msg.good("Downloaded the corpus")
 
-    include_ent_hints = False
     if entity_hinting == EntityHinting.pipeline:
-        raise NotImplementedError(
-            "pipeline entity hinting is not implemented for the GDA corpus."
-            ' Please use "gold" or "none"'
+        msg.info(
+            "Entity hints will be inserted into the source text using the annotations from PubTator."
         )
     elif entity_hinting == EntityHinting.gold:
-        include_ent_hints = True
         msg.info("Entity hints will be inserted into the source text using the gold annotations.")
 
     with msg.loading("Preprocessing the training data..."):
