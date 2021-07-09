@@ -79,7 +79,7 @@ def main(output_dir: Path) -> None:
 
     with msg.loading("Downloading corpus..."):
         dataset = load_dataset("ade_corpus_v2", "Ade_corpus_v2_drug_ade_relation")["train"]
-    msg.good("Downloaded the corpus")
+    msg.good("Downloaded the corpus.")
 
     with msg.loading("Preprocessing the data..."):
         preprocessed_dataset = _preprocess(dataset)
@@ -88,11 +88,11 @@ def main(output_dir: Path) -> None:
             preprocessed_dataset, valid_size=valid_size, test_size=test_size
         )
 
-    msg.good("Preprocessed the data")
+    msg.good("Preprocessed the data.")
     msg.info(
         (
             f"Holding out {valid_size:.2%} of the training data as a validation set"
-            f" and {test_size:.2%} as a test set"
+            f" and {test_size:.2%} as a test set."
         )
     )
 
@@ -102,7 +102,7 @@ def main(output_dir: Path) -> None:
     (output_dir / "train.tsv").write_text("\n".join(train))
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
-    msg.good(f"Preprocessed data saved to {output_dir.resolve()}")
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 if __name__ == "__main__":

@@ -67,7 +67,7 @@ def main(
 
     with msg.loading("Downloading corpus..."):
         train_raw, valid_raw, test_raw = _download_corpus()
-    msg.good("Downloaded the corpus")
+    msg.good("Downloaded the corpus.")
 
     if entity_hinting == EntityHinting.pipeline:
         msg.info(
@@ -80,7 +80,7 @@ def main(
         train = _preprocess(train_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
         valid = _preprocess(valid_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
         test = _preprocess(test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
-    msg.good("Preprocessed the data")
+    msg.good("Preprocessed the data.")
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -88,7 +88,7 @@ def main(
     (output_dir / "train.tsv").write_text("\n".join(train))
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
-    msg.good(f"Preprocessed data saved to {output_dir.resolve()}")
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 if __name__ == "__main__":

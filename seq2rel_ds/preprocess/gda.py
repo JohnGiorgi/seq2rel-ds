@@ -92,7 +92,7 @@ def _preprocess(
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
 ) -> List[str]:
-    kwargs = {"concepts": ["Gene", "Disease"]} if entity_hinting else {}
+    kwargs = {"concepts": ["gene", "disease"]} if entity_hinting else {}
 
     pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
     pubtator_annotations = util.parse_pubtator(
@@ -126,7 +126,7 @@ def main(
 
     with msg.loading("Downloading corpus..."):
         train_raw, test_raw = _download_corpus()
-    msg.good("Downloaded the corpus")
+    msg.good("Downloaded the corpus.")
 
     if entity_hinting == EntityHinting.pipeline:
         msg.info(
@@ -137,13 +137,13 @@ def main(
 
     with msg.loading("Preprocessing the training data..."):
         train = _preprocess(*train_raw, include_ent_hints)
-    msg.good("Preprocessed the training data")
+    msg.good("Preprocessed the training data.")
     with msg.loading("Preprocessing the test data..."):
         test = _preprocess(*test_raw, include_ent_hints)
-    msg.good("Preprocessed the test data")
+    msg.good("Preprocessed the test data.")
 
     train, valid = train_test_split(train, test_size=VALID_SIZE)
-    msg.info(f"Holding out {VALID_SIZE:.2%} of the training data as a validation set")
+    msg.info(f"Holding out {VALID_SIZE:.2%} of the training data as a validation set.")
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -151,7 +151,7 @@ def main(
     (output_dir / "train.tsv").write_text("\n".join(train))
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
-    msg.good(f"Preprocessed data saved to {output_dir.resolve()}")
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 if __name__ == "__main__":
