@@ -101,3 +101,23 @@ class TestBC5CDR(Seq2RelDSTestCase):
         assert (tmp_path / "train.tsv").is_file()
         assert (tmp_path / "valid.tsv").is_file()
         assert (tmp_path / "test.tsv").is_file()
+
+    def test_bc5cdr_command_pipline_entity_hinting(self, tmp_path: Path) -> None:
+        output_dir = str(tmp_path)
+        result = runner.invoke(bc5cdr.app, [output_dir, "--entity-hinting", "pipeline"])
+        assert result.exit_code == 0
+
+        # Check that the expected files were created
+        assert (tmp_path / "train.tsv").is_file()
+        assert (tmp_path / "valid.tsv").is_file()
+        assert (tmp_path / "test.tsv").is_file()
+
+    def test_bc5cdr_command_gold_entity_hinting(self, tmp_path: Path) -> None:
+        output_dir = str(tmp_path)
+        result = runner.invoke(bc5cdr.app, [output_dir, "--entity-hinting", "gold"])
+        assert result.exit_code == 0
+
+        # Check that the expected files were created
+        assert (tmp_path / "train.tsv").is_file()
+        assert (tmp_path / "valid.tsv").is_file()
+        assert (tmp_path / "test.tsv").is_file()
