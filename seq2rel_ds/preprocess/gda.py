@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import requests
 import typer
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
-from seq2rel_ds.preprocess.util import EntityHinting
+from seq2rel_ds.common.util import EntityHinting
 from sklearn.model_selection import train_test_split
 
 app = typer.Typer()
@@ -86,8 +86,13 @@ def _convert_to_pubtator(abstracts: str, anns: str, labels: str) -> str:
 
 
 def _preprocess(
-    abstracts: str, anns: str, labels: str, sort_rels: bool = True, include_ent_hints: bool = False
+    abstracts: str,
+    anns: str,
+    labels: str,
+    sort_rels: bool = True,
+    entity_hinting: Optional[EntityHinting] = None,
 ) -> List[str]:
+    kwargs = {"concepts": ["gene", "disease"], "skip_malformed": True} if entity_hinting else {}
 
     pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
     pubtator_annotations = util.parse_pubtator(
@@ -95,7 +100,7 @@ def _preprocess(
     )
 
     seq2rel_annotations = util.pubtator_to_seq2rel(
-        pubtator_annotations, sort_rels=sort_rels, include_ent_hints=include_ent_hints
+        pubtator_annotations, sort_rels=sort_rels, entity_hinting=entity_hinting, **kwargs
     )
 
     return seq2rel_annotations
@@ -108,10 +113,10 @@ def main(
         True, help="Sort relations according to order of first appearance."
     ),
     entity_hinting: EntityHinting = typer.Option(
-        EntityHinting.none,
+        None,
         help=(
             'Entity hinting strategy. Pass "gold" to use the gold standard annotations, "pipeline"'
-            ' to use annotations predicted by a pretrained model, and "none" to not include entity hints.'
+            " to use annotations predicted by a pretrained model, or omit it to not include entity hints."
         ),
         case_sensitive=False,
     ),
@@ -121,27 +126,24 @@ def main(
 
     with msg.loading("Downloading corpus..."):
         train_raw, test_raw = _download_corpus()
-    msg.good("Downloaded the corpus")
+    msg.good("Downloaded the corpus.")
 
-    include_ent_hints = False
     if entity_hinting == EntityHinting.pipeline:
-        raise NotImplementedError(
-            "pipeline entity hinting is not implemented for the GDA corpus."
-            ' Please use "gold" or "none"'
+        msg.info(
+            "Entity hints will be inserted into the source text using the annotations from PubTator."
         )
     elif entity_hinting == EntityHinting.gold:
-        include_ent_hints = True
         msg.info("Entity hints will be inserted into the source text using the gold annotations.")
 
     with msg.loading("Preprocessing the training data..."):
-        train = _preprocess(*train_raw, sort_rels=sort_rels, include_ent_hints=include_ent_hints)
-    msg.good("Preprocessed the training data")
+        train = _preprocess(*train_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
+    msg.good("Preprocessed the training data.")
     with msg.loading("Preprocessing the test data..."):
-        test = _preprocess(*test_raw, sort_rels=sort_rels, include_ent_hints=include_ent_hints)
-    msg.good("Preprocessed the test data")
+        test = _preprocess(*test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
+    msg.good("Preprocessed the test data.")
 
     train, valid = train_test_split(train, test_size=VALID_SIZE)
-    msg.info(f"Holding out {VALID_SIZE:.2%} of the training data as a validation set")
+    msg.info(f"Holding out {VALID_SIZE:.2%} of the training data as a validation set.")
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -149,7 +151,7 @@ def main(
     (output_dir / "train.tsv").write_text("\n".join(train))
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
-    msg.good(f"Preprocessed data saved to {output_dir.resolve()}")
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 if __name__ == "__main__":

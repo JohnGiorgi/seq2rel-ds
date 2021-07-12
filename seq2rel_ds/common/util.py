@@ -2,25 +2,52 @@ import random
 import re
 from enum import Enum
 from operator import itemgetter
-from typing import Any, Dict, Iterable, List, Tuple, Union, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
+import requests
+from more_itertools import chunked
+from requests.adapters import HTTPAdapter
+from seq2rel_ds.common import util
 from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 from sklearn.model_selection import train_test_split
+from urllib3.util.retry import Retry
 
+# Seeds
 SEED = 13370
 NUMPY_SEED = 1337
 
+# API URLs
+PUBTATOR_API_URL = "https://www.ncbi.nlm.nih.gov/research/pubtator-api/publications/export/pubtator"
+
+# Secial tokens
 END_OF_REL_SYMBOL = "@EOR@"
 COREF_SEP_SYMBOL = ";"
 START_ENT_HINT = "@START_{}@"
 END_ENT_HINT = "@END_{}@"
 
-
+# Enums
 class TextSegment(str, Enum):
     title = "title"
     abstract = "abstract"
     both = "both"
+
+
+class EntityHinting(str, Enum):
+    gold = "gold"
+    pipeline = "pipeline"
+
+
+# Here, we create a session globally that can be used in all requests. We add a hook that will
+# call raise_for_status() after all our requests. Because API calls can be flaky, we also add
+# multiple requests with backoff.
+# Details here: https://findwork.dev/blog/advanced-usage-python-requests-timeouts-retries-hooks/
+# and here: https://stackoverflow.com/questions/15431044/can-i-set-max-retries-for-requests-request
+s = requests.Session()
+assert_status_hook = lambda response, *args, **kwargs: response.raise_for_status()  # noqa
+s.hooks["response"] = [assert_status_hook]
+retries = Retry(total=5, backoff_factor=0.1)
+s.mount("https://", HTTPAdapter(max_retries=retries))
 
 
 # Private functions #
@@ -91,52 +118,11 @@ def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> str:
     return text.strip()
 
 
-def _load_scispacy(model_name: str):
-    """Load the ScispaCy model `model_name`. Additionally adds the `AbbreviationDetector` and
-    `EntityLinker` pipes to the returned model.
-    """
-    try:
-        import spacy
-        import scispacy  # noqa
-        from scispacy.abbreviation import AbbreviationDetector  # noqa
-        from scispacy.linking import EntityLinker  # noqa
-    except ImportError:
-        raise ValueError(
-            'ScispaCy is not installed. Please install seq2rel-ds with extras "scispacy"'
-        )
-
-    try:
-        nlp = spacy.load(model_name)
-    except OSError:
-        raise ValueError(
-            f"Couldn't find ScispaCy model {model_name}. Follow the instructions here:"
-            " https://allenai.github.io/scispacy/ to install"
-        )
-    nlp.add_pipe("abbreviation_detector")
-    nlp.add_pipe("scispacy_linker", config={"resolve_abbreviations": True, "linker_name": "umls"})
-    return nlp
-
-
-def _annotate_scispacy(text: str, nlp):
-    """Annotate `text` with the ScispaCy model `nlp` and return a `PubtatorAnnotation` instance."""
-    annotation = PubtatorAnnotation(text=text)
-    doc = nlp(text)
-    for ent in doc.ents:
-        if not ent._.kb_ents:
-            continue
-        uid = ent._.kb_ents[0]
-        mention = ent.text.lower()
-        offset = (ent.start_char, ent.end_char)
-        label = ent.label_
-        if uid in annotation.clusters:
-            if mention not in annotation.clusters[uid].ents:
-                annotation.clusters[uid].ents.append(mention)
-                annotation.clusters[uid].offsets.append(offset)
-        else:
-            annotation.clusters[uid] = PubtatorCluster(
-                ents=[mention], offsets=[offset], label=label
-            )
-    return annotation
+def _query_pubtator(body: Dict[str, Any], **kwargs):
+    r = s.post(PUBTATOR_API_URL, json=body)
+    pubtator_content = r.text.strip()
+    pubtator_annotations = util.parse_pubtator(pubtator_content, **kwargs)
+    return pubtator_annotations
 
 
 # Public functions #
@@ -155,8 +141,10 @@ def sanitize_text(text: str, lowercase: bool = False) -> str:
     return sanitized_text
 
 
-def sort_by_offset(items: List[str], offsets: List[int], **kwargs) -> List[str]:
-    """Returns `items`, sorted in ascending order according to `offsets`"""
+def sort_by_offset(items: List[str], offsets: List[int], **kwargs: Any) -> List[str]:
+    """Returns `items`, sorted in ascending order according to `offsets`.
+    Optional `**kwargs` are passed to `sorted`.
+    """
     if len(items) != len(offsets):
         raise ValueError(f"len(items) ({len(items)}) != len(offsets) ({len(offsets)})")
     packed = list(zip(items, offsets))
@@ -187,7 +175,7 @@ def train_valid_test_split(
     **kwargs: Any,
 ) -> Tuple[List[Any], List[Any], List[Any]]:
     """Given an iterable (`data`), returns train, valid and test partitions of size `train_size`,
-    `valid_size` and `test_size`. Optional kwargs are passed to `sklearn.model_selection.train_test_split`
+    `valid_size` and `test_size`. Optional `**kwargs` are passed to `sklearn.model_selection.train_test_split`.
 
     See https://datascience.stackexchange.com/a/53161 for details.
     """
@@ -321,17 +309,17 @@ def parse_pubtator(
 
 
 def pubtator_to_seq2rel(
-    pubtator_annotations: Dict[str, PubtatorAnnotation],
+    document_annotations: Dict[str, PubtatorAnnotation],
     sort_rels: bool = True,
-    include_ent_hints: bool = False,
-    scispacy_model: Optional[str] = None,
+    entity_hinting: Optional[EntityHinting] = None,
+    **kwargs: Any,
 ) -> List[str]:
     """Converts the highly structured `pubtator_annotations` input to a format that can be used
-    with seq2rel.
+    with seq2rel. Optional `**kwargs` are passed to `query_pubtator`.
 
     # Parameters
 
-    pubtator_annotations : `str`
+    document_annotations : `str`
         A dictionary, keyed by PMIDs, containing `PubtatorAnnotation` objects to convert to the
         seq2rel format.
     sort_rels : bool, optional (default = `True`)
@@ -341,29 +329,24 @@ def pubtator_to_seq2rel(
         True if entity markers should be included within the source text. This effectively converts
         the end-to-end relation extraction problem to a pipeline relation extraction approach, where
         entities are given.
-    scispacy_model : str, optional (default = `None`)
-        If provided, the predictions of this ScispaCy model will be used to determine the entity
-        hints (as opposed to the annotations in `pubtator_annotations`). Has no effect if
-        `include_ent_hints` is `False`.
     """
     seq2rel_annotations = []
 
-    if include_ent_hints and scispacy_model:
-        nlp = _load_scispacy(scispacy_model)
+    # If using pipeline-based entity hinting, it is much faster to retrieve the annotations in bulk
+    if entity_hinting == EntityHinting.pipeline:
+        pubtator_annotations = query_pubtator(list(document_annotations.keys()), **kwargs)
 
-    for annotation in pubtator_annotations.values():
+    for pmid, annotation in document_annotations.items():
         relations = []
         offsets = []
 
-        if include_ent_hints:
-            # If the user provided a scispacy_model, we create our entity hints using its
-            # predictions. This functionality exists to mimic pipeline-based setup, where
-            # existing NER and NEL models are used to label the data before applying the RE model.
-            if scispacy_model:
-                scispacy_annotation = _annotate_scispacy(annotation.text, nlp)
-                annotation.text = _insert_ent_hints(scispacy_annotation)
-            else:
-                annotation.text = _insert_ent_hints(annotation)
+        # Apply entity hinting using the requested strategy (if any). In the "pipeline" setting
+        # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
+        # the ground truth annotations.
+        if entity_hinting == EntityHinting.pipeline:
+            annotation.text = _insert_ent_hints(pubtator_annotations[pmid])
+        elif entity_hinting == EntityHinting.gold:
+            annotation.text = _insert_ent_hints(annotation)
 
         for rel in annotation.relations:
             ent_ids, rel_label = rel[:-1], rel[-1]
@@ -392,3 +375,39 @@ def pubtator_to_seq2rel(
         seq2rel_annotations.append(f"{annotation.text}\t{' '.join(relations)}")
 
     return seq2rel_annotations
+
+
+def query_pubtator(
+    pmids: List[str],
+    concepts: Optional[List[str]] = None,
+    pmids_per_request: int = 1000,
+    **kwargs: Any,
+) -> Dict[str, PubtatorAnnotation]:
+    """Queries PubTator for the given `pmids` and `concepts`, parses the results and
+    returns a highly structured dictionary-like object keyed by PMID. Optional `**kwargs` are passed
+    to `seq2rel_ds.common.util.parse_pubtator`.
+    For details on the PubTator API, see: https://www.ncbi.nlm.nih.gov/research/pubtator/api.html
+
+    # Parameters
+
+    pmids : `List[str]`
+        A list of PMIDs to query PubTator with.
+    concepts : `List[str]`, optional (default = `None`)
+        A list of concepts to include in the PubTator results.
+
+    """
+    body = {}
+    if concepts is not None:
+        body["concepts"] = concepts
+    annotations = {}
+    for chunk in chunked(pmids, pmids_per_request):
+        # Try to post requests in chunks to speed things up...
+        try:
+            body["pmids"] = chunk
+            pubtator_annotations = _query_pubtator(body, **kwargs)
+            annotations.update(pubtator_annotations)
+        # ...but, if the request fails, recursively half the size of the request.
+        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
+            pubtator_annotations = query_pubtator(chunk, concepts, pmids_per_request // 2, **kwargs)
+            annotations.update(pubtator_annotations)
+    return annotations
