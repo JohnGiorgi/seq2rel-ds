@@ -1,9 +1,6 @@
-import io
-import zipfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import requests
 import typer
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
@@ -19,12 +16,10 @@ TEST_FILENAME = "CDR_TestSet.PubTator.txt"
 
 
 def _download_corpus() -> Tuple[str, str, str]:
-    # https://stackoverflow.com/a/23419450/6578628
-    r = requests.get(BC5CDR_URL)
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    train = z.read(str(Path(PARENT_DIR) / TRAIN_FILENAME)).decode("utf8")
-    valid = z.read(str(Path(PARENT_DIR) / VALID_FILENAME)).decode("utf8")
-    test = z.read(str(Path(PARENT_DIR) / TEST_FILENAME)).decode("utf8")
+    z = util.download_zip(BC5CDR_URL)
+    train = z.read(str(Path(PARENT_DIR) / TRAIN_FILENAME)).decode()
+    valid = z.read(str(Path(PARENT_DIR) / VALID_FILENAME)).decode()
+    test = z.read(str(Path(PARENT_DIR) / TEST_FILENAME)).decode()
 
     return train, valid, test
 
@@ -34,7 +29,6 @@ def _preprocess(
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
 ) -> List[str]:
-
     kwargs = {"concepts": ["chemical", "disease"], "skip_malformed": True} if entity_hinting else {}
 
     pubtator_annotations = util.parse_pubtator(

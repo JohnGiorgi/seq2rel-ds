@@ -1,8 +1,11 @@
+import io
 import random
 import re
 from enum import Enum
 from operator import itemgetter
+
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from zipfile import ZipFile
 
 import numpy as np
 import requests
@@ -139,6 +142,13 @@ def sanitize_text(text: str, lowercase: bool = False) -> str:
     sanitized_text = " ".join(text.strip().split())
     sanitized_text = sanitized_text.lower() if lowercase else sanitized_text
     return sanitized_text
+
+
+def download_zip(url: str) -> ZipFile:
+    # https://stackoverflow.com/a/23419450/6578628
+    r = requests.get(url)
+    z = ZipFile(io.BytesIO(r.content))
+    return z
 
 
 def sort_by_offset(items: List[str], offsets: List[int], **kwargs: Any) -> List[str]:
@@ -396,7 +406,7 @@ def query_pubtator(
         A list of concepts to include in the PubTator results.
 
     """
-    body = {}
+    body = {"type": "pmids"}
     if concepts is not None:
         body["concepts"] = concepts
     annotations = {}
