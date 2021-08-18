@@ -36,6 +36,7 @@ wasabi = "^0.8.2"
 # Have to pin this to avoid a conflict with spacy
 pydantic = ">=1.7.1,<1.8.0"
 scikit-learn = "^0.24.1"
+boltons = "^21.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
