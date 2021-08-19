@@ -1,6 +1,6 @@
 import typer
 from seq2rel_ds.common.util import set_seeds
-from seq2rel_ds.preprocess import ade, bc5cdr, docred, gda
+from seq2rel_ds.preprocess import ade, bc5cdr, docred, gda, dgm
 
 set_seeds()
 
