@@ -25,6 +25,7 @@ class PubtatorAnnotation(BaseModel):
     """
 
     text: str
+    pmid: str
     clusters: Dict[str, PubtatorCluster] = {}
     relations: List[Tuple[str, ...]] = []
 
@@ -46,6 +47,6 @@ def as_pubtator_annotation(dct):
     """To be used as `object_hook` with `json` methods to load serialized data as
     `PubtatorAnnotation` objects.
     """
-    if "text" in dct and "clusters" in dct and "relations" in dct:
+    if all(key in dct for key in ["text", "pmid", "clusters", "relations"]):
         return PubtatorAnnotation(**dct)
     return dct
