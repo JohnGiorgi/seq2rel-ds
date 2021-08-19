@@ -1,0 +1,11 @@
+10022417	640	689	complete idiopathic hypogonadotropic hypogonadism	Disease	C562785
+10022417	1013	1053	idiopathic hypogonadotropic hypogonadism	Disease	C562785
+10022417	1077	1087	amenorrhea	Disease	D000568
+10022417	105	117	hypogonadism	Disease	D007006
+10022417	34	73	gonadotropin-releasing hormone receptor	Gene	2798
+10022417	256	269	GnRH receptor	Gene	2798
+10022417	1530	1543	GnRH receptor	Gene	2798
+
+10022756	54	68	bladder cancer	Disease	D001749
+10022756	104	116	Foot Disease	Disease	D005534
+10022756	4	8	NAT2	Gene	10
