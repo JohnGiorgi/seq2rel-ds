@@ -15,6 +15,7 @@ from seq2rel_ds.common import util
 from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 from sklearn.model_selection import train_test_split
 from urllib3.util.retry import Retry
+from itertools import zip_longest
 
 # Seeds
 SEED = 13370
@@ -28,6 +29,7 @@ END_OF_REL_SYMBOL = "@EOR@"
 COREF_SEP_SYMBOL = ";"
 START_ENT_HINT = "@START_{}@"
 END_ENT_HINT = "@END_{}@"
+
 
 # Enums
 class TextSegment(str, Enum):
@@ -75,13 +77,30 @@ def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
     return match
 
 
+def _pubtator_ann_is_mention(pubtator_ann: Union[str, List[str]]) -> bool:
+    """Return True if a PubTator annotation is an entity mention and False if it is a relation.
+    `pubtator_ann` can be provided as a tab-delimited string or a list of strings.
+
+    Preconditions:
+        - `pubtator_ann` is a valid PubTator formatted annotation and is not a title or abstract line.
+    """
+    if isinstance(pubtator_ann, str):
+        pubtator_ann = pubtator_ann.split("\t")
+    try:
+        _ = int(pubtator_ann[1])
+        _ = int(pubtator_ann[2])
+        return True
+    except ValueError:
+        return False
+
+
 def _sort_entity_annotations(annotations: List[str]) -> List[str]:
     """Sort PubTator entity annotations by order of first appearence."""
 
     # We only sort the entities, so we have to seperate them from the relations,
     # perform the sort and then join everything together.
-    ents = [ann for ann in annotations if len(ann.split("\t")) != 4]
-    rels = [ann for ann in annotations if len(ann.split("\t")) == 4]
+    ents = [ann for ann in annotations if _pubtator_ann_is_mention(ann)]
+    rels = [ann for ann in annotations if not _pubtator_ann_is_mention(ann)]
     sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]))
     return sorted_ents + rels
 
@@ -105,7 +124,7 @@ def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> str:
         # This is easier than the alternative (using the offsets from the annotated corpus)
         # but does run the risk of inserting entity hints at the wrong location. However,
         # this is likely to be very infrequent.
-        for ent, (start, end) in zip(cluster.ents, cluster.offsets):
+        for ent in cluster.ents:
             match = _search_ent(ent, text)
             if not match:
                 continue
@@ -203,9 +222,9 @@ def parse_pubtator(
     text_segment: TextSegment = TextSegment.both,
     sort_ents: bool = True,
     skip_malformed: bool = False,
-) -> Dict[str, PubtatorAnnotation]:
-    """Parses a PubTator format string (`pubtator_content`) returning a highly structured,
-    dictionary-like object keyed by PMID.
+) -> List[PubtatorAnnotation]:
+    """Parses a PubTator formatted string (`pubtator_content`) and returns a list of
+    `PubtatorAnnotation` objects.
 
     # Parameters
 
@@ -225,7 +244,7 @@ def parse_pubtator(
     articles = pubtator_content.strip().split("\n\n")
 
     # Parse the annotations, producing a highly structured output
-    parsed = {}
+    parsed = []
     for article in articles:
         # Extract the title and abstract (if it exists)
         split_article = article.strip().split("\n")
@@ -251,16 +270,25 @@ def parse_pubtator(
                 raise ValueError(msg)
             text = abstract
 
-        parsed[pmid] = PubtatorAnnotation(text=text)
+        parsed.append(PubtatorAnnotation(pmid=pmid, text=text))
 
         for ann in annotations:
             split_ann = ann.strip().split("\t")
 
-            if len(split_ann) >= 6:
+            # This is a entity mention
+            if _pubtator_ann_is_mention(split_ann):
                 if len(split_ann) == 6:
                     _, start, end, ents, label, uids = split_ann
                 elif len(split_ann) == 7:
                     _, start, end, _, label, uids, ents = split_ann
+                # For some cases (like distant supervision) it is
+                # convenient to skip annotations that are malformed.
+                else:
+                    if skip_malformed:
+                        continue
+                    else:
+                        err_msg = f"Found an annotation with an unexpected number of columns: {ann}"
+                        raise ValueError(err_msg)
                 start, end = int(start), int(end)  # type: ignore
 
                 # Ignore this annotation if it is not in the chosen text segment
@@ -280,8 +308,8 @@ def parse_pubtator(
                         continue
 
                     # Don't retain duplicate entities
-                    duplicate = uid in parsed[pmid].clusters and ent.lower() in [
-                        ent.lower() for ent in parsed[pmid].clusters[uid].ents
+                    duplicate = uid in parsed[-1].clusters and ent.lower() in [
+                        ent.lower() for ent in parsed[-1].clusters[uid].ents
                     ]
                     if duplicate:
                         continue
@@ -295,31 +323,29 @@ def parse_pubtator(
                     else:
                         adj_start, adj_end = start, end
 
-                    if uid in parsed[pmid].clusters:
-                        parsed[pmid].clusters[uid].ents.append(ent)
-                        parsed[pmid].clusters[uid].offsets.append((adj_start, adj_end))
+                    if uid in parsed[-1].clusters:
+                        parsed[-1].clusters[uid].ents.append(ent)
+                        parsed[-1].clusters[uid].offsets.append((adj_start, adj_end))
                     else:
-                        parsed[pmid].clusters[uid] = PubtatorCluster(
+                        parsed[-1].clusters[uid] = PubtatorCluster(
                             ents=[ent], offsets=[(adj_start, adj_end)], label=label
                         )
-            elif len(split_ann) == 4:  # this is a relation
-                _, label, uid_1, uid_2 = split_ann
-                if uid_1 in parsed[pmid].clusters and uid_2 in parsed[pmid].clusters:
-                    parsed[pmid].relations.append((uid_1, uid_2, label))
-            # For some cases (like distant supervision) it is convenient to
-            # skip annotations that are malformed.
+            # This is a relation
             else:
-                if skip_malformed:
-                    continue
-                else:
-                    err_msg = f"Found an annotation with an unexpected number of columns: {ann}"
-                    raise ValueError(err_msg)
+                _, label, *uids = split_ann
+                rel = (*uids, label)
+                # Check that the relations entities are in the text
+                # and that this relation is unique.
+                if rel not in parsed[-1].relations and all(
+                    uid in parsed[-1].clusters for uid in uids
+                ):
+                    parsed[-1].relations.append(rel)
 
     return parsed
 
 
 def pubtator_to_seq2rel(
-    document_annotations: Dict[str, PubtatorAnnotation],
+    document_annotations: List[PubtatorAnnotation],
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
     **kwargs: Any,
@@ -329,9 +355,8 @@ def pubtator_to_seq2rel(
 
     # Parameters
 
-    document_annotations : `str`
-        A dictionary, keyed by PMIDs, containing `PubtatorAnnotation` objects to convert to the
-        seq2rel format.
+    document_annotations : `List[PubtatorAnnotation]`
+        A list of`PubtatorAnnotation` objects to convert to the seq2rel format.
     sort_rels : bool, optional (default = `True`)
         Whether relations should be sorted by order of first appearance. This useful for traditional
         seq2seq models that use an order-sensitive loss function, like negative log-likelihood.
@@ -342,31 +367,35 @@ def pubtator_to_seq2rel(
     """
     seq2rel_annotations = []
 
+    pmids = [ann.pmid for ann in document_annotations]
+
     # If using pipeline-based entity hinting, it is much faster to retrieve the annotations in bulk
     if entity_hinting == EntityHinting.pipeline:
-        pubtator_annotations = query_pubtator(list(document_annotations.keys()), **kwargs)
+        pubtator_annotations = query_pubtator(pmids, **kwargs)
+    else:
+        pubtator_annotations = []
 
-    for pmid, annotation in document_annotations.items():
+    for doc_ann, pubtator_ann in zip_longest(document_annotations, pubtator_annotations):
         relations = []
         offsets = []
 
         # Apply entity hinting using the requested strategy (if any). In the "pipeline" setting
         # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
         # the ground truth annotations.
-        if entity_hinting == EntityHinting.pipeline:
-            annotation.text = _insert_ent_hints(pubtator_annotations[pmid])
+        if entity_hinting == EntityHinting.pipeline and pubtator_ann:
+            doc_ann.text = _insert_ent_hints(pubtator_ann)
         elif entity_hinting == EntityHinting.gold:
-            annotation.text = _insert_ent_hints(annotation)
+            doc_ann.text = _insert_ent_hints(doc_ann)
 
-        for rel in annotation.relations:
+        for rel in doc_ann.relations:
             ent_ids, rel_label = rel[:-1], rel[-1]
             # If `sort_rels`, we will sort relations in order of first appearance.
             # To determine order, use the sum of the min end offsets of each cluster.
             offset = sum(
-                min(annotation.clusters[id_].offsets, key=itemgetter(1))[1] for id_ in ent_ids
+                min(doc_ann.clusters[id_].offsets, key=itemgetter(1))[1] for id_ in ent_ids
             )
-            ent_clusters = [annotation.clusters[id_].ents for id_ in ent_ids]
-            ent_labels = [annotation.clusters[id_].label for id_ in ent_ids]
+            ent_clusters = [doc_ann.clusters[id_].ents for id_ in ent_ids]
+            ent_labels = [doc_ann.clusters[id_].label for id_ in ent_ids]
             relation = format_relation(
                 ent_clusters=ent_clusters,
                 ent_labels=ent_labels,
@@ -382,7 +411,7 @@ def pubtator_to_seq2rel(
         else:
             random.shuffle(relations)
 
-        seq2rel_annotations.append(f"{annotation.text}\t{' '.join(relations)}")
+        seq2rel_annotations.append(f"{doc_ann.text}\t{' '.join(relations)}")
 
     return seq2rel_annotations
 
@@ -392,7 +421,7 @@ def query_pubtator(
     concepts: Optional[List[str]] = None,
     pmids_per_request: int = 1000,
     **kwargs: Any,
-) -> Dict[str, PubtatorAnnotation]:
+) -> List[PubtatorAnnotation]:
     """Queries PubTator for the given `pmids` and `concepts`, parses the results and
     returns a highly structured dictionary-like object keyed by PMID. Optional `**kwargs` are passed
     to `seq2rel_ds.common.util.parse_pubtator`.
@@ -409,15 +438,15 @@ def query_pubtator(
     body = {"type": "pmids"}
     if concepts is not None:
         body["concepts"] = concepts
-    annotations = {}
+    annotations = []
     for chunk in chunked(pmids, pmids_per_request):
         # Try to post requests in chunks to speed things up...
         try:
             body["pmids"] = chunk
             pubtator_annotations = _query_pubtator(body, **kwargs)
-            annotations.update(pubtator_annotations)
+            annotations.extend(pubtator_annotations)
         # ...but, if the request fails, recursively half the size of the request.
         except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
             pubtator_annotations = query_pubtator(chunk, concepts, pmids_per_request // 2, **kwargs)
-            annotations.update(pubtator_annotations)
+            annotations.extend(pubtator_annotations)
     return annotations
