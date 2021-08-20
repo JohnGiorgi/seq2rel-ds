@@ -48,6 +48,7 @@ def test_insert_ent_hints() -> None:
     )
 
     pubator_annotation = schemas.PubtatorAnnotation(
+        pmid="12160362",
         text=text,
         clusters={
             # These are out of order on purpose, to ensure the function is insensitive to it
@@ -82,6 +83,7 @@ def test_insert_ent_hints_compound() -> None:
         " intrahepatic and extrahepatic cholestasis."
     )
     pubator_annotation = schemas.PubtatorAnnotation(
+        pmid="9862868",
         text=text,
         clusters={
             "D002780": schemas.PubtatorCluster(
@@ -109,6 +111,7 @@ def test_insert_ent_hints_overlapping() -> None:
         " time, were characterized for the presence of coagulation factor VII deficiency."
     )
     pubator_annotation = schemas.PubtatorAnnotation(
+        pmid="8844208",
         text=text,
         clusters={
             "2155": schemas.PubtatorCluster(
@@ -136,6 +139,7 @@ def test_insert_ent_hints_no_mutation() -> None:
         " intrahepatic and extrahepatic cholestasis."
     )
     pubator_annotation = schemas.PubtatorAnnotation(
+        pmid="9862868",
         text=text,
         clusters={
             "D002780": schemas.PubtatorCluster(
@@ -217,44 +221,32 @@ def test_query_pubtator() -> None:
     }
 
     # Title only
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=title_text,
-            clusters=title_clusters,
-            relations=[],
-        ),
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=title_text, clusters=title_clusters, relations=[]
+    )
     actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.title)
     # Breaking up the asserts leads to much clearer outputs when the test fails
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
 
     # Abstract only
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=abstract_text,
-            clusters=abstract_clusters,
-            relations=[],
-        ),
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=abstract_text, clusters=abstract_clusters, relations=[]
+    )
     actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.abstract)
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
 
     # Both
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=f"{title_text} {abstract_text}",
-            clusters=both_clusters,
-            relations=[],
-        ),
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=f"{title_text} {abstract_text}", clusters=both_clusters, relations=[]
+    )
     actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.both)
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
 
 
 # Public functions #
@@ -400,44 +392,38 @@ def test_parse_pubtator() -> None:
     }
 
     # Title only
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=title_text,
-            clusters=title_clusters,
-            relations=[],
-        ),
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=title_text, clusters=title_clusters, relations=[]
+    )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.title)
     # Breaking up the asserts leads to much clearer outputs when the test fails
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
 
     # Abstract only
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=abstract_text,
-            clusters=abstract_clusters,
-            relations=[("D001569", "D005221", "CID")],
-        ),
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid,
+        text=abstract_text,
+        clusters=abstract_clusters,
+        relations=[("D001569", "D005221", "CID")],
+    )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.abstract)
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
 
     # Both
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=f"{title_text} {abstract_text}",
-            clusters=both_clusters,
-            relations=[("D001569", "D005221", "CID")],
-        ),
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid,
+        text=f"{title_text} {abstract_text}",
+        clusters=both_clusters,
+        relations=[("D001569", "D005221", "CID")],
+    )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.both)
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
 
 
 def test_parse_pubtator_skip_malformed_raises_value_error() -> None:
@@ -506,32 +492,29 @@ def test_parse_pubtator_compound_ent() -> None:
     {pmid}\t186\t209\tHBV and HIV co-infected\tDisease\tD006509|D015658	HBV infected|HIV infected
     """
 
-    expected = {
-        pmid: schemas.PubtatorAnnotation(
-            text=f"{title_text} {abstract_text}",
-            clusters={
-                "D019259": schemas.PubtatorCluster(
-                    ents=["lamivudine"],
-                    offsets=[(26, 36)],
-                    label="Chemical",
-                ),
-                "D012964": schemas.PubtatorCluster(
-                    ents=["na"], offsets=[(59, 61)], label="Chemical"
-                ),
-                "D006509": schemas.PubtatorCluster(
-                    ents=["hepatitis B virus (HBV) infected", "HBV infected"],
-                    offsets=[(66, 98), (186, 209)],
-                    label="Disease",
-                ),
-                "D015658": schemas.PubtatorCluster(
-                    ents=["HIV co-infection", "HIV infected"],
-                    offsets=[(125, 141), (194, 209)],
-                    label="Disease",
-                ),
-            },
-        )
-    }
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid,
+        text=f"{title_text} {abstract_text}",
+        clusters={
+            "D019259": schemas.PubtatorCluster(
+                ents=["lamivudine"],
+                offsets=[(26, 36)],
+                label="Chemical",
+            ),
+            "D012964": schemas.PubtatorCluster(ents=["na"], offsets=[(59, 61)], label="Chemical"),
+            "D006509": schemas.PubtatorCluster(
+                ents=["hepatitis B virus (HBV) infected", "HBV infected"],
+                offsets=[(66, 98), (186, 209)],
+                label="Disease",
+            ),
+            "D015658": schemas.PubtatorCluster(
+                ents=["HIV co-infection", "HIV infected"],
+                offsets=[(125, 141), (194, 209)],
+                label="Disease",
+            ),
+        },
+    )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.both)
-    assert actual[pmid].text == expected[pmid].text
-    assert actual[pmid].clusters == expected[pmid].clusters
-    assert actual[pmid].relations == expected[pmid].relations
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
