@@ -10,7 +10,7 @@ runner = CliRunner()
 class TestBC5CDR(Seq2RelDSTestCase):
     def setup_method(self) -> None:
         super().setup_method()
-        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "BC5CDR"
+        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "bc5cdr"
         self.train_path = self.data_dir / bc5cdr.TRAIN_FILENAME
         self.valid_path = self.data_dir / bc5cdr.VALID_FILENAME
         self.test_path = self.data_dir / bc5cdr.TEST_FILENAME
