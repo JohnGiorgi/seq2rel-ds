@@ -10,7 +10,7 @@ runner = CliRunner()
 class TestGDA(Seq2RelDSTestCase):
     def setup_method(self) -> None:
         super().setup_method()
-        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "GDA"
+        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "gda"
         self.train_path = self.data_dir / gda.TRAIN_DATA
         self.test_path = self.data_dir / gda.TEST_DATA
 
@@ -81,22 +81,16 @@ class TestGDA(Seq2RelDSTestCase):
         abstracts = (self.train_path / gda.ABSTRACTS_FILENAME).read_text()
         anns = (self.train_path / gda.ANNS_FILENAME).read_text()
         labels = (self.train_path / gda.LABELS_FILENAME).read_text()
-        actual = gda._preprocess(
-            abstracts=abstracts,
-            anns=anns,
-            labels=labels,
-        )
+        train_raw = [abstracts, anns, labels]
+        actual = gda._preprocess(train_raw)
         assert actual == self.train
 
         # test data
         abstracts = (self.test_path / gda.ABSTRACTS_FILENAME).read_text()
         anns = (self.test_path / gda.ANNS_FILENAME).read_text()
         labels = (self.test_path / gda.LABELS_FILENAME).read_text()
-        actual = gda._preprocess(
-            abstracts=abstracts,
-            anns=anns,
-            labels=labels,
-        )
+        test_raw = [abstracts, anns, labels]
+        actual = gda._preprocess(test_raw)
         assert actual == self.test
 
     def test_gda_command(self, tmp_path: Path) -> None:

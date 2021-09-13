@@ -1,105 +1,109 @@
-import json
+import requests
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import typer
+from seq2rel_ds import msg
 from seq2rel_ds.common import util
+
 
 app = typer.Typer()
 
-TRAIN_ANNOTATED_FILENAME = "train_annotated.json"
-TRAIN_DISTANT_FILENAME = "train_distant.json"
-VALID_FILENAME = "dev.json"
-TEST_FILENAME = "test.json"
-REL_INFO_FILENAME = "rel_info.json"
+DOCRED_URL = "http://lavis.cs.hs-rm.de/storage/jerex/public/datasets/docred_joint/"
+TRAIN_FILENAME = "train_joint.json"
+VALID_FILENAME = "dev_joint.json"
+TEST_FILENAME = "test_joint.json"
+TYPES_FILENAME = "types.json"
 
 # Some custom types for working with the DocRED vertexSet JSON object
 VertexSet = List[Dict[str, Any]]
 ParsedVetex = Tuple[List[str], List[List[int]], str]
 
 
-def _parse_vertex_set(vertex_set: VertexSet) -> ParsedVetex:
-    names: List[str] = []
-    offsets: List[List[int]] = []
-    label: str = ""
-    for vertex in vertex_set:
-        name = vertex["name"].lower()
-        if name not in names:
-            names.append(name)
-        offsets.append(vertex["pos"])
-        if not label:
-            label = vertex["type"]
-    return names, offsets, label
+def _download_corpus() -> Tuple[
+    List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, Any]
+]:
+    train = requests.get(f"{DOCRED_URL}/{TRAIN_FILENAME}").json()
+    valid = requests.get(f"{DOCRED_URL}/{VALID_FILENAME}").json()
+    test = requests.get(f"{DOCRED_URL}/{TEST_FILENAME}").json()
+    types = requests.get(f"{DOCRED_URL}/{TYPES_FILENAME}").json()
+
+    return train, valid, test, types
 
 
-def _preprocess(filepath: Path, rel_labels: Optional[Dict[str, str]] = None) -> List[str]:
-    dataset = json.loads(filepath.read_text().strip())
-    processed_dataset = []
-    for example in dataset:
-        text = " ".join([" ".join(sent) for sent in example["sents"]])
-        relations = []
-        offsets = []
-        # The use of get here is because the key "labels" may not exist for some examples
-        for label in example.get("labels", []):
-            # Rel labels are just arbitrary identifiers. Use the provided dict to get actual names
+def _convert_to_pubtator(
+    examples: List[Dict[str, Any]], rel_labels: Optional[Dict[str, str]] = None
+) -> str:
+    pubtator_formatted_anns = []
+    for doc_id, example in enumerate(examples):
+        sents = example["sents"]
+        text = util.sanitize_text(" ".join(" ".join(sent) for sent in sents))
+        pubtator_formatted_ann = f"{doc_id}|t|\n{doc_id}|a|{text}\n"
+        for ent_id, ent in enumerate(example["vertexSet"]):
+            for mention in ent:
+                start, end = mention["pos"]
+                name = util.sanitize_text(mention["name"])
+                type_ = mention["type"]
+                # The start and end indexes are relative to their own sentence.
+                # Account for this to produce document-level offsets.
+                sent_offset = sum(len(sent) for sent in sents[: mention["sent_id"]])
+                start += sent_offset
+                end += sent_offset
+
+                pubtator_formatted_ann += f"{doc_id}\t{start}\t{end}\t{name}\t{type_}\t{ent_id}\n"
+
+        for rel in example.get("labels", []):
+            label = rel["r"]
+            head = rel["h"]
+            tail = rel["t"]
+
+            # If the `rel_labels` dict was provided, get the verbose or human readable label.
             if rel_labels:
-                rel_label = rel_labels[label["r"]]
-                rel_label = "_".join(rel_label.strip().replace(",", "").upper().split())
-            else:
-                rel_label = label["r"]
-            # For some godforsaken reason, the indices are 1-indexed
-            head_vertex = example["vertexSet"][label["h"]]
-            tail_vertex = example["vertexSet"][label["t"]]
+                label = "_".join(rel_labels[label].strip().replace(",", "").upper().split())
 
-            head_names, head_offsets, head_label = _parse_vertex_set(head_vertex)
-            tail_names, tail_offsets, tail_label = _parse_vertex_set(tail_vertex)
+            pubtator_formatted_ann += f"{doc_id}\t{label}\t{head}\t{tail}\n"
 
-            # Keep track of the end offsets of each entity. We will use these to sort
-            # relations according to their order of first appearence in the text.
-            head_offset = min((end for _, end in head_offsets))
-            tail_offset = min((end for _, end in head_offsets))
-            offset = head_offset + tail_offset
+        pubtator_formatted_anns.append(pubtator_formatted_ann.strip())
 
-            ent_clusters = [head_names, tail_names]
-            ent_labels = [head_label, tail_label]
-
-            relation = util.format_relation(
-                ent_clusters=ent_clusters,
-                ent_labels=ent_labels,
-                rel_label=rel_label,
-            )
-            relations.append(relation)
-            offsets.append(offset)
-
-        if relations:
-            relations = util.sort_by_offset(relations, offsets)
-        processed_dataset.append(f"{text}\t{' '.join(relations)}")
-    return processed_dataset
+    return "\n\n".join(pubtator_formatted_anns)
 
 
-@app.callback(invoke_without_command=True)
+def _preprocess(
+    examples: List[Dict[str, Any]],
+    rel_labels: Optional[Dict[str, str]] = None,
+    sort_rels: bool = True,
+) -> List[str]:
+    pubtator_content = _convert_to_pubtator(examples, rel_labels=rel_labels)
+    pubtator_annotations = util.parse_pubtator(
+        pubtator_content=pubtator_content, text_segment=util.TextSegment.abstract, sort_ents=True
+    )
+    seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations, sort_rels=sort_rels)
+
+    return seq2rel_annotations
+
+
+@app.command()
 def main(
-    input_dir: Path = typer.Argument(..., help="Path to a local copy of the DocRED corpus."),
     output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
-    use_distant: bool = typer.Option(
-        False,
-        help=(
-            "Pass this to use the distantly supervised train data."
-            " Otherwise, the annotated train data is used."
-        ),
+    sort_rels: bool = typer.Option(
+        True, help="Sort relations according to order of first appearance."
     ),
 ) -> None:
-    """Preprocess a local copy of the DocRED corpus for use with seq2rel."""
-    train_filename = TRAIN_DISTANT_FILENAME if use_distant else TRAIN_ANNOTATED_FILENAME
-    train_filepath = Path(input_dir) / train_filename
-    dev_filepath = Path(input_dir) / VALID_FILENAME
-    test_filepath = Path(input_dir) / TEST_FILENAME
+    """Download and preprocess the DocRED corpus for use with seq2rel."""
+    msg.divider("Preprocessing DocRED")
 
-    rel_info = json.loads((Path(input_dir) / REL_INFO_FILENAME).read_text())
+    with msg.loading("Downloading corpus..."):
+        train_raw, valid_raw, test_raw, types = _download_corpus()
+    msg.good("Downloaded the corpus.")
 
-    train = _preprocess(train_filepath, rel_labels=rel_info)
-    valid = _preprocess(dev_filepath, rel_labels=rel_info)
-    test = _preprocess(test_filepath, rel_labels=rel_info)
+    # Create a dictionary mapping relation labels to their actual names.
+    rel_labels = {key: value["verbose"] for key, value in types["relations"].items()}
+
+    with msg.loading("Preprocessing the data..."):
+        train = _preprocess(train_raw, rel_labels=rel_labels, sort_rels=sort_rels)
+        valid = _preprocess(valid_raw, rel_labels=rel_labels, sort_rels=sort_rels)
+        test = _preprocess(test_raw, rel_labels=rel_labels, sort_rels=sort_rels)
+    msg.good("Preprocessed the data.")
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -107,6 +111,7 @@ def main(
     (output_dir / "train.tsv").write_text("\n".join(train))
     (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 if __name__ == "__main__":

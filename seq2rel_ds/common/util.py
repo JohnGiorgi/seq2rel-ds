@@ -94,14 +94,16 @@ def _pubtator_ann_is_mention(pubtator_ann: Union[str, List[str]]) -> bool:
         return False
 
 
-def _sort_entity_annotations(annotations: List[str]) -> List[str]:
-    """Sort PubTator entity annotations by order of first appearence."""
+def _sort_entity_annotations(annotations: List[str], **kwargs: Any) -> List[str]:
+    """Sort PubTator entity annotations by order of first appearence. Optional `**kwargs` are
+    passed to `sorted`.
+    """
 
     # We only sort the entities, so we have to seperate them from the relations,
     # perform the sort and then join everything together.
     ents = [ann for ann in annotations if _pubtator_ann_is_mention(ann)]
     rels = [ann for ann in annotations if not _pubtator_ann_is_mention(ann)]
-    sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]))
+    sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]), **kwargs)
     return sorted_ents + rels
 
 
@@ -140,7 +142,7 @@ def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> str:
     return text.strip()
 
 
-def _query_pubtator(body: Dict[str, Any], **kwargs):
+def _query_pubtator(body: Dict[str, Any], **kwargs: Any):
     r = s.post(PUBTATOR_API_URL, json=body)
     pubtator_content = r.text.strip()
     pubtator_annotations = util.parse_pubtator(pubtator_content, **kwargs)
