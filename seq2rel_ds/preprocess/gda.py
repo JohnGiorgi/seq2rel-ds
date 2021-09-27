@@ -22,7 +22,7 @@ REL_LABEL = "GDA"
 VALID_SIZE = 0.20
 
 
-def _download_corpus() -> Tuple[List[List[str]], List[List[str]]]:
+def _download_corpus() -> Tuple[List[str], List[str]]:
     train_abstracts = requests.get(GDA_DATA_URL + f"/{TRAIN_DATA}/" + ABSTRACTS_FILENAME).text
     train_anns = requests.get(GDA_DATA_URL + f"/{TRAIN_DATA}/" + ANNS_FILENAME).text
     train_labels = requests.get(GDA_DATA_URL + f"/{TRAIN_DATA}/" + LABELS_FILENAME).text
@@ -86,14 +86,13 @@ def _convert_to_pubtator(abstracts: str, anns: str, labels: str) -> str:
 
 
 def _preprocess(
-    abstracts: str,
-    anns: str,
-    labels: str,
+    examples: List[str],
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
 ) -> List[str]:
     kwargs = {"concepts": ["gene", "disease"], "skip_malformed": True} if entity_hinting else {}
 
+    abstracts, anns, labels = examples
     pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
     pubtator_annotations = util.parse_pubtator(
         pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
@@ -136,10 +135,10 @@ def main(
         msg.info("Entity hints will be inserted into the source text using the gold annotations.")
 
     with msg.loading("Preprocessing the training data..."):
-        train = _preprocess(*train_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
+        train = _preprocess(train_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
     msg.good("Preprocessed the training data.")
     with msg.loading("Preprocessing the test data..."):
-        test = _preprocess(*test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
+        test = _preprocess(test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
     msg.good("Preprocessed the test data.")
 
     train, valid = train_test_split(train, test_size=VALID_SIZE)
