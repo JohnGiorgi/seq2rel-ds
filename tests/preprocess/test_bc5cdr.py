@@ -33,7 +33,7 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 " functional antagonism suggests the release of an endogenous opiate by clonidine or"
                 " alpha-methyldopa and the possible role of the opiate in the central control of"
                 " sympathetic tone."
-                "\t@CID@ alpha-methyldopa @CHEMICAL@ hypotensive @DISEASE@ @EOR@"
+                "\talpha-methyldopa @CHEMICAL@ hypotensive @DISEASE@ @CID@"
             ),
             (
                 "Sulpiride-induced tardive dystonia. Sulpiride is a selective D2-receptor"
@@ -43,7 +43,7 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 " 37-year-old man who developed persistent segmental dystonia within 2 months"
                 " after starting sulpiride therapy. We could not find any previous reports of"
                 " sulpiride-induced tardive dystonia."
-                "\t@CID@ sulpiride @CHEMICAL@ tardive dystonia; dystonia @DISEASE@ @EOR@"
+                "\tsulpiride @CHEMICAL@ tardive dystonia; dystonia @DISEASE@ @CID@"
             ),
         ]
         self.valid = [
@@ -58,9 +58,9 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 " incidence of congenital heart disease when taken during early pregnancy. It also"
                 " causes neurologic depression, cyanosis, and cardiac arrhythmia when consumed"
                 " prior to delivery."
-                "\t@CID@ lithium carbonate @CHEMICAL@ neurologic depression @DISEASE@ @EOR@"
-                " @CID@ lithium carbonate @CHEMICAL@ cyanosis @DISEASE@ @EOR@"
-                " @CID@ lithium carbonate @CHEMICAL@ cardiac arrhythmia @DISEASE@ @EOR@"
+                "\tlithium carbonate @CHEMICAL@ neurologic depression @DISEASE@ @CID@"
+                " lithium carbonate @CHEMICAL@ cyanosis @DISEASE@ @CID@"
+                " lithium carbonate @CHEMICAL@ cardiac arrhythmia @DISEASE@ @CID@"
             )
         ]
         self.test = [
@@ -75,7 +75,7 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 " pharmacokinetics of famotidine are reviewed, with no change in its metabolism in"
                 " the elderly population seen. The implications of using famotidine in elderly"
                 " persons are discussed."
-                "\t@CID@ famotidine @CHEMICAL@ delirium @DISEASE@ @EOR@"
+                "\tfamotidine @CHEMICAL@ delirium @DISEASE@ @CID@"
             )
         ]
 

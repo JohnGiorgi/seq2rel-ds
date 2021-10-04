@@ -31,7 +31,7 @@ class TestDocRED(Seq2RelDSTestCase):
                 " network . The island elects two trustees to the Islands Trust , an organization"
                 " that unites small island communities in British Columbia to oversee development"
                 " and land use . Other islands in Howe Sound include Keats Island and Anvil Island ."
-                "\t@LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@ keats island @LOC@ howe sound @LOC@ @EOR@"
+                "\tkeats island @LOC@ howe sound @LOC@ @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
             ),
             (
                 "The short - beaked common dolphin ( Delphinus delphis ) is a species of common"
@@ -58,9 +58,9 @@ class TestDocRED(Seq2RelDSTestCase):
                 " Corporation from 1979 , becoming chairman of the board in January 1999 until the"
                 " CBS merger . He also served as a director of Infininity Broadcasting Corporation"
                 " until the Infinity merger ."
-                "\t@DATE_OF_BIRTH@ david thomas mclaughlin; mclaughlin @PER@ march 16 , 1932 @TIME@ @EOR@"
-                " @DATE_OF_DEATH@ david thomas mclaughlin; mclaughlin @PER@ august 25 , 2004 @TIME@ @EOR@"
-                " @EMPLOYER@ david thomas mclaughlin; mclaughlin @PER@ cbs corporation; cbs @ORG@ @EOR@"
+                "\tdavid thomas mclaughlin; mclaughlin @PER@ march 16 , 1932 @TIME@ @DATE_OF_BIRTH@"
+                " david thomas mclaughlin; mclaughlin @PER@ august 25 , 2004 @TIME@ @DATE_OF_DEATH@"
+                " david thomas mclaughlin; mclaughlin @PER@ cbs corporation; cbs @ORG@ @EMPLOYER@"
             ),
             (
                 "Chachalacas are galliform birds from the genus Ortalis . These birds are found in"
@@ -80,10 +80,10 @@ class TestDocRED(Seq2RelDSTestCase):
                 " this does agree with the known fossil record – including indeterminate , cracid -"
                 " like birds – which very cautiously favors a north - to - south expansion of the"
                 " family .\t"
-                "@PARENT_TAXON@ chachalacas @MISC@ ortalis @MISC@ @EOR@"
-                " @CONTAINS_ADMINISTRATIVE_TERRITORIAL_ENTITY@ united states @LOC@ texas @LOC@ @EOR@"
-                " @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@ texas @LOC@ united states @LOC@ @EOR@"
-                " @COUNTRY@ texas @LOC@ united states @LOC@ @EOR@"
+                "chachalacas @MISC@ ortalis @MISC@ @PARENT_TAXON@"
+                " united states @LOC@ texas @LOC@ @CONTAINS_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
+                " texas @LOC@ united states @LOC@ @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
+                " texas @LOC@ united states @LOC@ @COUNTRY@"
             ),
         ]
         self.test = [
@@ -98,13 +98,13 @@ class TestDocRED(Seq2RelDSTestCase):
                 " ordered for the RAN , were not cancelled and were subsequently completed in"
                 " Australia . Seven Battles were commissioned before the end of World War II , but"
                 " only saw action , with the British Pacific Fleet .\t"
-                "@COUNTRY@ british royal navy; rn @ORG@ british @LOC@ @EOR@"
-                " @COUNTRY@ british royal navy; rn @ORG@ english @LOC@ @EOR@"
-                " @COUNTRY@ royal australian navy; ran @ORG@ australia @LOC@ @EOR@"
-                " @CONFLICT@ royal australian navy; ran @ORG@ world war ii @MISC@ @EOR@"
-                " @COUNTRY@ british pacific fleet @ORG@ british @LOC@ @EOR@"
-                " @COUNTRY@ british pacific fleet @ORG@ english @LOC@ @EOR@"
-                " @CONFLICT@ british pacific fleet @ORG@ world war ii @MISC@ @EOR@"
+                "british royal navy; rn @ORG@ british @LOC@ @COUNTRY@"
+                " british royal navy; rn @ORG@ english @LOC@ @COUNTRY@"
+                " royal australian navy; ran @ORG@ australia @LOC@ @COUNTRY@"
+                " royal australian navy; ran @ORG@ world war ii @MISC@ @CONFLICT@"
+                " british pacific fleet @ORG@ british @LOC@ @COUNTRY@"
+                " british pacific fleet @ORG@ english @LOC@ @COUNTRY@"
+                " british pacific fleet @ORG@ world war ii @MISC@ @CONFLICT@"
             )
         ]
 

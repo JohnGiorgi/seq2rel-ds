@@ -38,14 +38,14 @@ class TestGDA(Seq2RelDSTestCase):
                 " secretion of LH in the younger sister. The same mutations of the GnRH receptor gene"
                 " may thus determine different degrees of alteration of gonadotropin function in"
                 " affected kindred of the same family."
-                "\t@GDA@ gonadotropin-releasing hormone receptor; gnrh receptor @GENE@ complete"
+                "\tgonadotropin-releasing hormone receptor; gnrh receptor @GENE@ complete"
                 " idiopathic hypogonadotropic hypogonadism; idiopathic hypogonadotropic hypogonadism"
-                " @DISEASE@ @EOR@"
+                " @DISEASE@ @GDA@"
             ),
             (
                 "The NAT2* slow acetylator genotype is associated with bladder cancer in Taiwanese,"
                 " but not in the Black Foot Disease endemic area population."
-                "\t@GDA@ nat2 @GENE@ bladder cancer @DISEASE@ @EOR@"
+                "\tnat2 @GENE@ bladder cancer @DISEASE@ @GDA@"
             ),
         ]
         self.test = [
@@ -72,7 +72,7 @@ class TestGDA(Seq2RelDSTestCase):
                 " The 186 base pair allele was also significantly associated with PD (OR = 1.85;"
                 " p = 0.048; 95% CI = 1.01-3.42). The GT repeat in intron 2 of the MAOB gene is a"
                 " powerful marker for PD in this large Australian cohort."
-                "\t@GDA@ monoamine oxidase b; maob @GENE@ parkinson's disease; pd @DISEASE@ @EOR@"
+                "\tmonoamine oxidase b; maob @GENE@ parkinson's disease; pd @DISEASE@ @GDA@"
             )
         ]
 
