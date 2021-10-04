@@ -192,8 +192,8 @@ def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_la
     formatted_rel = ""
     for ents, label in zip(ent_clusters, ent_labels):
         formatted_ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
-        formatted_rel += f" {formatted_ents} @{label.strip().upper()}@"
-    formatted_rel += f" @{rel_label.strip().upper()}@"
+        formatted_rel += f"{formatted_ents} @{label.strip().upper()}@ "
+    formatted_rel += f"@{rel_label.strip().upper()}@"
     return formatted_rel
 
 
@@ -436,7 +436,7 @@ def query_pubtator(
         A list of concepts to include in the PubTator results.
 
     """
-    body = {"type": "pmids"}
+    body: Dict[str, Any] = {"type": "pmids"}
     if concepts is not None:
         body["concepts"] = concepts
     annotations = []
