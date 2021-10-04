@@ -302,9 +302,7 @@ def test_format_relation() -> None:
     rel_label = "Interaction "
     ent_clusters = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
     ent_labels = ["GGP", " GGP", "GGP "]
-    expected = (
-        f"@INTERACTION@ mita ; sting @GGP@ nf-kappab @GGP@ irf3 @GGP@ {util.END_OF_REL_SYMBOL}"
-    )
+    expected = "mita ; sting @GGP@ nf-kappab @GGP@ irf3 @GGP@ @INTERACTION@"
     actual = util.format_relation(
         ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
     )

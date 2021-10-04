@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from datasets import load_dataset
-from seq2rel_ds.common import util
 from seq2rel_ds.common.testing import Seq2RelDSTestCase
 from seq2rel_ds.preprocess import ade
 from typer.testing import CliRunner
@@ -16,11 +15,11 @@ class TestADE(Seq2RelDSTestCase):
         actual = ade._preprocess(dataset)
         assert actual[0] == (
             "Intravenous azithromycin-induced ototoxicity."
-            f"\t@{ade.REL_LABEL}@ azithromycin @{ade.DRUG_LABEL}@ ototoxicity @{ade.EFFECT_LABEL}@ {util.END_OF_REL_SYMBOL}"
+            f"\tazithromycin @{ade.DRUG_LABEL}@ ototoxicity @{ade.EFFECT_LABEL}@ @{ade.REL_LABEL}@"
         )
         assert actual[-1] == (
             "Successful challenge with clozapine in a history of eosinophilia."
-            f"\t@{ade.REL_LABEL}@ clozapine @{ade.DRUG_LABEL}@ eosinophilia @{ade.EFFECT_LABEL}@ {util.END_OF_REL_SYMBOL}"
+            f"\tclozapine @{ade.DRUG_LABEL}@ eosinophilia @{ade.EFFECT_LABEL}@ @{ade.REL_LABEL}@"
         )
 
     def test_ade_command(self, tmp_path: Path) -> None:
