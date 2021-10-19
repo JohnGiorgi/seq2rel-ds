@@ -8,7 +8,13 @@ readme = "README.md"
 homepage = "https://github.com/JohnGiorgi/seq2rel-ds"
 repository = "https://github.com/JohnGiorgi/seq2rel-ds"
 documentation = "https://github.com/JohnGiorgi/seq2rel-ds"
-keywords = ["seq2rel", "seq2seq", "information extraction", "distant supervision", "weak supervision"]
+keywords = [
+    "seq2rel",
+    "seq2seq",
+    "information extraction",
+    "distant supervision",
+    "weak supervision"
+]
 classifiers = [
     "Development Status :: 1 - Planning",
     "Environment :: Console",
@@ -26,10 +32,9 @@ exclude = ["tests", "test_fixtures"]
 
 [tool.poetry.dependencies]
 python = "^3.7.1"
-datasets = "^1.2.1"
-more-itertools = "^8.7.0"
-pandas = "^1.2.1"
 typer = {extras = ["all"], version = "^0.4.0"}
+more-itertools = "^8.10.0"
+pandas = "^1.2.1"
 wasabi = "^0.8.2"
 pydantic = "^1.7.1"
 scikit-learn = "^0.24.1"
@@ -39,23 +44,14 @@ boltons = "^21.0.0"
 black = "^20.8b1"
 codecov = "^2.1.11"
 coverage = "^5.5"
-dephell = {extras = ["full"], version = "^0.8.3"}
 flake8 = "^3.8.4"
 hypothesis = "^6.9.1"
 mypy = "^0.812"
 pytest = "^5.2"
 pytest-cov = "^2.11.1"
-icecream = "^2.1.1"
 
 [tool.poetry.scripts]
 seq2rel-ds = "seq2rel_ds.main:app"
-
-# Allows us to automatically generate a setup.py file (with `dephell deps convert`)
-# from this pyproject.toml so people who are not interested in using poetry don't have to.
-# See: https://github.com/dephell/dephell
-[tool.dephell.main]
-from = {format = "poetry", path = "pyproject.toml"}
-to = {format = "setuppy", path = "setup.py"}
 
 # This configuration is borrowed from: https://github.com/allenai/allennlp/blob/main/pyproject.toml
 [tool.black]
@@ -79,5 +75,5 @@ exclude = '''
 '''
 
 [build-system]
-requires = ["poetry-core>=1.1.10"]
+requires = ["poetry-core>=1.1.11"]
 build-backend = "poetry.core.masonry.api"
