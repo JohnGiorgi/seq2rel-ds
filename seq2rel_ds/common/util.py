@@ -2,8 +2,8 @@ import io
 import random
 import re
 from enum import Enum
+from itertools import zip_longest
 from operator import itemgetter
-
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from zipfile import ZipFile
 
@@ -11,11 +11,10 @@ import numpy as np
 import requests
 from more_itertools import chunked
 from requests.adapters import HTTPAdapter
-from seq2rel_ds.common import util
+from seq2rel_ds.common import sorting_utils, special_tokens
 from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 from sklearn.model_selection import train_test_split
 from urllib3.util.retry import Retry
-from itertools import zip_longest
 
 # Seeds
 SEED = 13370
@@ -23,11 +22,6 @@ NUMPY_SEED = 1337
 
 # API URLs
 PUBTATOR_API_URL = "https://www.ncbi.nlm.nih.gov/research/pubtator-api/publications/export/pubtator"
-
-# Secial tokenss
-COREF_SEP_SYMBOL = ";"
-START_ENT_HINT = "@START_{}@"
-END_ENT_HINT = "@END_{}@"
 
 
 # Enums
@@ -61,7 +55,6 @@ def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
     """Search for the first occurance of `ent` in `text`, returning an `re.Match` object if found
     and `None` otherwise.
     """
-
     # To match ent to text most accurately, we use a type of "backoff" strategy. First, we look for
     # the whole entity in text. If we cannot find it, we look for a lazy match of its first and last
     # tokens. In both cases, we look for whole word matches first (considering word boundaries).
@@ -76,75 +69,10 @@ def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
     return match
 
 
-def _pubtator_ann_is_mention(pubtator_ann: Union[str, List[str]]) -> bool:
-    """Return True if a PubTator annotation is an entity mention and False if it is a relation.
-    `pubtator_ann` can be provided as a tab-delimited string or a list of strings.
-
-    Preconditions:
-        - `pubtator_ann` is a valid PubTator formatted annotation and is not a title or abstract line.
-    """
-    if isinstance(pubtator_ann, str):
-        pubtator_ann = pubtator_ann.split("\t")
-    try:
-        _ = int(pubtator_ann[1])
-        _ = int(pubtator_ann[2])
-        return True
-    except ValueError:
-        return False
-
-
-def _sort_entity_annotations(annotations: List[str], **kwargs: Any) -> List[str]:
-    """Sort PubTator entity annotations by order of first appearence. Optional `**kwargs` are
-    passed to `sorted`.
-    """
-
-    # We only sort the entities, so we have to seperate them from the relations,
-    # perform the sort and then join everything together.
-    ents = [ann for ann in annotations if _pubtator_ann_is_mention(ann)]
-    rels = [ann for ann in annotations if not _pubtator_ann_is_mention(ann)]
-    sorted_ents = sorted(ents, key=lambda x: int(x.split("\t")[2]), **kwargs)
-    return sorted_ents + rels
-
-
-def _insert_ent_hints(pubtator_annotation: PubtatorAnnotation) -> str:
-    """Given a `pubtator annotation`, inserts special tokens to the left and right of each
-    entity mention, which serve as hints to the model. This effectively turns the task into
-    relation extraction (as opposed to joint entity and relation extraction). Returns the text
-    with the inserted entity hints.
-    """
-    coref_id = 0
-    text = pubtator_annotation.text
-    for cluster in pubtator_annotation.clusters.values():
-        # Create the entity hints we will insert
-        left_hint = f" {START_ENT_HINT.format(cluster.label.upper())} "
-        right_hint = f" {END_ENT_HINT.format(cluster.label.upper())} "
-        if len(set(cluster.ents)) > 1:
-            right_hint = f" ; {coref_id}{right_hint}"
-            coref_id += 1
-        # We insert entity hints by finding the location of their first mention in the text.
-        # This is easier than the alternative (using the offsets from the annotated corpus)
-        # but does run the risk of inserting entity hints at the wrong location. However,
-        # this is likely to be very infrequent.
-        for ent in cluster.ents:
-            match = _search_ent(ent, text)
-            if not match:
-                continue
-            start, end = match.span()
-            text = (
-                text[:start].rstrip()
-                + left_hint
-                + text[start:end].strip()
-                + right_hint
-                + text[end:].lstrip()
-            )
-
-    return text.strip()
-
-
 def _query_pubtator(body: Dict[str, Any], **kwargs: Any):
     r = s.post(PUBTATOR_API_URL, json=body)
     pubtator_content = r.text.strip()
-    pubtator_annotations = util.parse_pubtator(pubtator_content, **kwargs)
+    pubtator_annotations = parse_pubtator(pubtator_content, **kwargs)
     return pubtator_annotations
 
 
@@ -171,19 +99,6 @@ def download_zip(url: str) -> ZipFile:
     return z
 
 
-def sort_by_offset(items: List[str], offsets: List[int], **kwargs: Any) -> List[str]:
-    """Returns `items`, sorted in ascending order according to `offsets`.
-    Optional `**kwargs` are passed to `sorted`.
-    """
-    if len(items) != len(offsets):
-        raise ValueError(f"len(items) ({len(items)}) != len(offsets) ({len(offsets)})")
-    packed = list(zip(items, offsets))
-    packed = sorted(packed, key=itemgetter(1), **kwargs)
-    sorted_items, _ = list(zip(*packed))
-    sorted_items = list(sorted_items)
-    return sorted_items
-
-
 def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
     """Given an arbitrary number of coreferent mentions (`ent_clusters`), a label for each of those
     mentions (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted string
@@ -191,7 +106,11 @@ def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_la
     """
     formatted_rel = ""
     for ents, label in zip(ent_clusters, ent_labels):
-        formatted_ents = sanitize_text(f"{COREF_SEP_SYMBOL} ".join(ents), lowercase=True)
+        # Only retain unique mentions (case-insensitive).
+        unique_ents = list(dict.fromkeys(ent.lower() for ent in ents))
+        formatted_ents = sanitize_text(
+            f"{special_tokens.COREF_SEP_SYMBOL} ".join(unique_ents), lowercase=True
+        )
         formatted_rel += f"{formatted_ents} @{label.strip().upper()}@ "
     formatted_rel += f"@{rel_label.strip().upper()}@"
     return formatted_rel
@@ -251,7 +170,7 @@ def parse_pubtator(
         split_article = article.strip().split("\n")
         title, abstract, annotations = split_article[0], split_article[1], split_article[2:]
         if sort_ents:
-            annotations = _sort_entity_annotations(annotations)
+            annotations = sorting_utils.sort_entity_annotations(annotations)
         pmid, title = title.split("|t|")
         abstract = abstract.split("|a|")[-1]
         title = title.strip()
@@ -277,7 +196,7 @@ def parse_pubtator(
             split_ann = ann.strip().split("\t")
 
             # This is a entity mention
-            if _pubtator_ann_is_mention(split_ann):
+            if sorting_utils.pubtator_ann_is_mention(split_ann):
                 if len(split_ann) == 6:
                     _, start, end, ents, label, uids = split_ann
                 elif len(split_ann) == 7:
@@ -306,13 +225,6 @@ def parse_pubtator(
                     # Ignore this annotation if the entity is not grounded.
                     # à la: https://www.aclweb.org/anthology/D19-1498/
                     if uid == "-1":
-                        continue
-
-                    # Don't retain duplicate entities
-                    duplicate = uid in parsed[-1].clusters and ent.lower() in [
-                        ent.lower() for ent in parsed[-1].clusters[uid].ents
-                    ]
-                    if duplicate:
                         continue
 
                     # If this is a compound entity update the offsets to be as correct as possible.
@@ -351,8 +263,8 @@ def pubtator_to_seq2rel(
     entity_hinting: Optional[EntityHinting] = None,
     **kwargs: Any,
 ) -> List[str]:
-    """Converts the highly structured `pubtator_annotations` input to a format that can be used
-    with seq2rel. Optional `**kwargs` are passed to `query_pubtator`.
+    """Converts the highly structured `pubtator_annotations` input to a format that can be used with
+    seq2rel. Optional `**kwargs` are passed to `query_pubtator` when `entity_hinting == "pipeline"`.
 
     # Parameters
 
@@ -384,9 +296,10 @@ def pubtator_to_seq2rel(
         # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
         # the ground truth annotations.
         if entity_hinting == EntityHinting.pipeline and pubtator_ann:
-            doc_ann.text = _insert_ent_hints(pubtator_ann)
+            pubtator_ann.insert_entity_hints()
+            doc_ann.text = pubtator_ann.text
         elif entity_hinting == EntityHinting.gold:
-            doc_ann.text = _insert_ent_hints(doc_ann)
+            doc_ann.insert_entity_hints()
 
         for rel in doc_ann.relations:
             ent_ids, rel_label = rel[:-1], rel[-1]
@@ -408,7 +321,7 @@ def pubtator_to_seq2rel(
         # This option mainly exists for the purposes of ablation.
         # To make this clearer, shuffle relations in random order if `sort_rels` is False.
         if relations and sort_rels:
-            relations = sort_by_offset(relations, offsets)
+            relations = sorting_utils.sort_by_offset(relations, offsets)
         else:
             random.shuffle(relations)
 
