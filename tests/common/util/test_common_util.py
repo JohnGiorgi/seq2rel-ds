@@ -1,4 +1,3 @@
-import copy
 import random
 import re
 
@@ -7,7 +6,6 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import booleans, text
 from seq2rel_ds.common import schemas, util
-from seq2rel_ds.common.util import TextSegment
 
 # Private functions #
 
@@ -30,223 +28,72 @@ def test_search_ent() -> None:
     assert match.span() == (0, 19)
 
 
-def test_insert_ent_hints() -> None:
-    """Asserts that insert_ent_hints works as expected for a list of edge cases."""
-    # A truncated example taken from the GDA dataset. It contains a few edge cases:
-    # - coreferent mention
-    # - entites that differ in case
-    # - paranthesized entity
-    # - multiple identical mentions of an entity
-    text = (
-        "Apolipoprotein E epsilon4 allele, elevated midlife total cholesterol level, and high"
-        " midlife systolic blood pressure are independent risk factors for late-life Alzheimer disease."
-        # A + was added to see if the method can handle regex characters in the text
-        " BACKGROUND: Presence of the apolipoprotein E (apoE+) epsilon4 allele, which is involved in"
-        " cholesterol metabolism, is the most important genetic risk factor for Alzheimer disease."
-        " Elevated midlife values for total cholesterol level and blood pressure have been"
-        " implicated recently as risk factors for Alzheimer disease."
-    )
+# def test_mask_ents():
+#     text = (
+#         "Apolipoprotein E epsilon4 allele, elevated midlife total cholesterol level, and high"
+#         " midlife systolic blood pressure are independent risk factors for late-life Alzheimer"
+#         " disease. BACKGROUND: Presence of the apolipoprotein E (apoE) epsilon4 allele, which is"
+#         " involved in cholesterol metabolism, is the most important genetic risk factor for"
+#         " Alzheimer disease. Elevated midlife values for total cholesterol level and blood pressure"
+#         " have been implicated recently as risk factors for Alzheimer disease."
+#     )
 
-    pubator_annotation = schemas.PubtatorAnnotation(
-        pmid="12160362",
-        text=text,
-        clusters={
-            # These are out of order on purpose, to ensure the function is insensitive to it
-            "348": schemas.PubtatorCluster(
-                ents=["Apolipoprotein E", "apoE+"], offsets=[(225, 229), (0, 17)], label="Gene"
-            ),
-            "D000544": schemas.PubtatorCluster(
-                ents=["Alzheimer disease"],
-                offsets=[(160, 177), (339, 356), (479, 496)],
-                label="Disease",
-            ),
-        },
-    )
-    expected = (
-        "@START_GENE@ Apolipoprotein E ; 0 @END_GENE@ epsilon4 allele, elevated midlife total cholesterol"
-        " level, and high midlife systolic blood pressure are independent risk factors for late-life"
-        " @START_DISEASE@ Alzheimer disease @END_DISEASE@ . BACKGROUND: Presence of the"
-        " apolipoprotein E ( @START_GENE@ apoE+ ; 0 @END_GENE@ ) epsilon4 allele,"
-        " which is involved in cholesterol metabolism, is the most important genetic risk factor for"
-        " Alzheimer disease. Elevated midlife values for total cholesterol level and blood pressure"
-        " have been implicated recently as risk factors for Alzheimer disease."
-    )
-    actual = util._insert_ent_hints(pubator_annotation)
+#     pubator_annotation = schemas.PubtatorAnnotation(
+#         pmid="12160362",
+#         text=text,
+#         clusters={
+#             "348": schemas.PubtatorCluster(
+#                 ents=["Apolipoprotein E", "apolipoprotein E", "apoE"],
+#                 offsets=[(0, 16), (207, 223), (225, 229)],
+#                 label="Gene",
+#             ),
+#             "D000544": schemas.PubtatorCluster(
+#                 ents=["Alzheimer disease", "Alzheimer disease", "Alzheimer disease"],
+#                 offsets=[(160, 177), (339, 356), (479, 496)],
+#                 label="Disease",
+#             ),
+#         },
+#     )
 
-    assert actual == expected
+#     # Test that this is a no-op when mask_frac is 0.
+#     actual = util._mask_ents(pubator_annotation, mask_frac=0.0)
 
+#     assert actual.text == pubator_annotation.text
+#     assert actual.clusters == pubator_annotation.clusters
+#     assert actual.relations == pubator_annotation.relations
 
-def test_insert_ent_hints_compound() -> None:
-    """Asserts that insert_ent_hints works as expected for compound entities."""
-    text = (
-        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
-        " intrahepatic and extrahepatic cholestasis."
-    )
-    pubator_annotation = schemas.PubtatorAnnotation(
-        pmid="9862868",
-        text=text,
-        clusters={
-            "D002780": schemas.PubtatorCluster(
-                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
-            ),
-            "D001651": schemas.PubtatorCluster(
-                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
-            ),
-        },
-    )
-    expected = (
-        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
-        " @START_DISEASE@ intrahepatic and @START_DISEASE@ extrahepatic cholestasis @END_DISEASE@ @END_DISEASE@ ."
-    )
-    actual = util._insert_ent_hints(pubator_annotation)
-    assert actual == expected
+#     expected_text = (
+#         f"{ENT_MASK} epsilon4 allele, elevated midlife total cholesterol level, and high"
+#         f" midlife systolic blood pressure are independent risk factors for late-life {ENT_MASK}."
+#         f" BACKGROUND: Presence of the {ENT_MASK} ({ENT_MASK}) epsilon4 allele, which is"
+#         " involved in cholesterol metabolism, is the most important genetic risk factor for"
+#         f" {ENT_MASK}. Elevated midlife values for total cholesterol level and blood pressure"
+#         f" have been implicated recently as risk factors for {ENT_MASK}."
+#     )
 
+#     expected = schemas.PubtatorAnnotation(
+#         pmid="12160362",
+#         text=expected_text,
+#         clusters={
+#             "348": schemas.PubtatorCluster(
+#                 ents=[ENT_MASK, ENT_MASK, ENT_MASK],
+#                 offsets=[(0, 16), (207, 223), (225, 229)],
+#                 label="Gene",
+#             ),
+#             "D000544": schemas.PubtatorCluster(
+#                 ents=[ENT_MASK, ENT_MASK, ENT_MASK],
+#                 offsets=[(160, 177), (339, 356), (479, 496)],
+#                 label="Disease",
+#             ),
+#         },
+#     )
 
-def test_insert_ent_hints_overlapping() -> None:
-    """Asserts that insert_ent_hints works as expected for overlapping entities."""
-    text = (
-        # A + was added to see if the method can handle regex characters in the text
-        "Mutation pattern in clinically asymptomatic coagulation factor VII+ deficiency. A total of"
-        " 122 subjects, referred after presurgery screening or checkup for prolonged prothrombin"
-        " time, were characterized for the presence of coagulation factor VII deficiency."
-    )
-    pubator_annotation = schemas.PubtatorAnnotation(
-        pmid="8844208",
-        text=text,
-        clusters={
-            "2155": schemas.PubtatorCluster(
-                ents=["coagulation factor VII+"], offsets=[(44, 67)], label="Gene"
-            ),
-            "D005168": schemas.PubtatorCluster(
-                ents=["factor VII+ deficiency"], offsets=[(56, 78)], label="Disease"
-            ),
-        },
-    )
-    expected = (
-        "Mutation pattern in clinically asymptomatic"
-        " @START_GENE@ coagulation @START_DISEASE@ factor VII+ @END_GENE@ deficiency @END_DISEASE@ ."
-        " A total of 122 subjects, referred after presurgery screening or checkup for prolonged"
-        " prothrombin time, were characterized for the presence of coagulation factor VII deficiency."
-    )
-    actual = util._insert_ent_hints(pubator_annotation)
-    assert actual == expected
+#     # Test that all entities are masked when mask_frac is 1.
+#     actual = util._mask_ents(pubator_annotation, mask_frac=1.0)
 
-
-def test_insert_ent_hints_no_mutation() -> None:
-    """Asserts that insert_ent_hints does not mutate the PubtatorAnnotation object."""
-    text = (
-        "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
-        " intrahepatic and extrahepatic cholestasis."
-    )
-    pubator_annotation = schemas.PubtatorAnnotation(
-        pmid="9862868",
-        text=text,
-        clusters={
-            "D002780": schemas.PubtatorCluster(
-                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
-            ),
-            "D001651": schemas.PubtatorCluster(
-                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
-            ),
-        },
-    )
-    expected = copy.deepcopy(pubator_annotation)
-    _ = util._insert_ent_hints(pubator_annotation)
-    assert pubator_annotation.text == expected.text
-    assert pubator_annotation.clusters == expected.clusters
-    assert pubator_annotation.relations == expected.relations
-
-
-def test_query_pubtator() -> None:
-    pmid = "19285439"
-    title_text = (
-        "The ubiquitin ligase RNF5 regulates antiviral responses by mediating degradation"
-        " of the adaptor protein MITA."
-    )
-    abstract_text = (
-        "Viral infection activates transcription factors NF-kappaB and IRF3, which collaborate to"
-        " induce type I interferons (IFNs) and elicit innate antiviral response. MITA (also known"
-        " as STING) has recently been identified as an adaptor that links virus-sensing receptors"
-        " to IRF3 activation. Here, we showed that the E3 ubiquitin ligase RNF5 interacted with"
-        " MITA in a viral-infection-dependent manner. Overexpression of RNF5 inhibited"
-        " virus-triggered IRF3 activation, IFNB1 expression, and cellular antiviral response,"
-        " whereas knockdown of RNF5 had opposite effects. RNF5 targeted MITA at Lys150 for"
-        " ubiquitination and degradation after viral infection. Both MITA and RNF5 were located at"
-        " the mitochondria and endoplasmic reticulum (ER) and viral infection caused their"
-        " redistribution to the ER and mitochondria, respectively. We further found that"
-        " virus-induced ubiquitination and degradation of MITA by RNF5 occurred at the"
-        " mitochondria. These findings suggest that RNF5 negatively regulates virus-triggered"
-        " signaling by targeting MITA for ubiquitination and degradation at the mitochondria."
-    )
-    title_clusters = {
-        "6048": schemas.PubtatorCluster(
-            ents=["RNF5"],
-            offsets=[(21, 25)],
-            label="Gene",
-        ),
-        "340061": schemas.PubtatorCluster(ents=["MITA"], offsets=[(104, 108)], label="Gene"),
-    }
-    abstract_clusters = {
-        "4790": schemas.PubtatorCluster(ents=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
-        "3661": schemas.PubtatorCluster(ents=["IRF3"], offsets=[(172, 176)], label="Gene"),
-        "340061": schemas.PubtatorCluster(
-            ents=["MITA", "STING"],
-            offsets=[
-                (270, 274),
-                (290, 295),
-            ],
-            label="Gene",
-        ),
-        "6048": schemas.PubtatorCluster(
-            ents=["RNF5"],
-            offsets=[(440, 444)],
-            label="Gene",
-        ),
-        "3456": schemas.PubtatorCluster(ents=["IFNB1"], offsets=[(571, 576)], label="Gene"),
-    }
-    both_clusters = {
-        "6048": schemas.PubtatorCluster(
-            ents=["RNF5"],
-            offsets=[(21, 25)],
-            label="Gene",
-        ),
-        "340061": schemas.PubtatorCluster(
-            ents=["MITA", "STING"],
-            offsets=[(104, 108), (290, 295)],
-            label="Gene",
-        ),
-        "4790": schemas.PubtatorCluster(ents=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
-        "3661": schemas.PubtatorCluster(ents=["IRF3"], offsets=[(172, 176)], label="Gene"),
-        "3456": schemas.PubtatorCluster(ents=["IFNB1"], offsets=[(571, 576)], label="Gene"),
-    }
-
-    # Title only
-    expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=title_text, clusters=title_clusters, relations=[]
-    )
-    actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.title)
-    # Breaking up the asserts leads to much clearer outputs when the test fails
-    assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
-    assert actual[0].relations == expected.relations
-
-    # Abstract only
-    expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=abstract_text, clusters=abstract_clusters, relations=[]
-    )
-    actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.abstract)
-    assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
-    assert actual[0].relations == expected.relations
-
-    # Both
-    expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=f"{title_text} {abstract_text}", clusters=both_clusters, relations=[]
-    )
-    actual = util.query_pubtator(pmids=[pmid], concepts=["gene"], text_segment=TextSegment.both)
-    assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
-    assert actual[0].relations == expected.relations
+#     assert actual.text == expected.text
+#     assert actual.clusters == expected.clusters
+#     assert actual.relations == expected.relations
 
 
 # Public functions #
@@ -277,32 +124,21 @@ def test_sanitize_text(text: str, lowercase: bool) -> None:
         assert all(not char.isupper() for char in sanitized_text)
 
 
-def test_sort_by_offset() -> None:
-    items = ["b", "c", "a"]
-    offsets = [1, 2, 0]
-
-    expected = ["a", "b", "c"]
-    actual = util.sort_by_offset(items, offsets)
-
-    assert actual == expected
-    # Check that we did not mutate the input
-    assert items == ["b", "c", "a"]
-
-
-def test_sort_by_offset_raise_value_error() -> None:
-    items = ["b", "c", "a"]
-    offsets = [1, 2]
-
-    with pytest.raises(ValueError):
-        _ = util.sort_by_offset(items, offsets)
+def test_download_zip() -> None:
+    # Download some dummy data and make sure we can read it.
+    z = util.download_zip("https://file-examples-com.github.io/uploads/2017/02/zip_2MB.zip")
+    assert len(z.namelist()) == 4
+    _ = z.read("zip_10MB/file_example_ODS_5000.ods")
+    _ = z.read("zip_10MB/file_example_PPT_1MB.ppt")
+    _ = z.read("zip_10MB/file-sample_1MB.doc")
 
 
 def test_format_relation() -> None:
-    # Add trailing and leading spaces throughout to ensure they are handled.
-    rel_label = "Interaction "
     ent_clusters = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
-    ent_labels = ["GGP", " GGP", "GGP "]
-    expected = "mita ; sting @GGP@ nf-kappab @GGP@ irf3 @GGP@ @INTERACTION@"
+    # Add trailing and leading spaces throughout to ensure they are handled.
+    rel_label = "PRGE "
+    ent_labels = ["GENE", " GENE", "GENE "]
+    expected = "mita ; sting @GENE@ nf-kappab @GENE@ irf3 @GENE@ @PRGE@"
     actual = util.format_relation(
         ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
     )
@@ -370,8 +206,8 @@ def test_parse_pubtator() -> None:
     }
     abstract_clusters = {
         "D001569": schemas.PubtatorCluster(
-            ents=["benzodiazepines", "BZDs"],
-            offsets=[(219, 234), (253, 257)],
+            ents=["benzodiazepines", "BZDs", "BZDs"],
+            offsets=[(219, 234), (253, 257), (583, 587)],
             label="Chemical",
         ),
         "D005221": schemas.PubtatorCluster(
@@ -380,8 +216,8 @@ def test_parse_pubtator() -> None:
     }
     both_clusters = {
         "D001569": schemas.PubtatorCluster(
-            ents=["benzodiazepines", "BZDs"],
-            offsets=[(28, 43), (253, 257)],
+            ents=title_clusters["D001569"].ents + abstract_clusters["D001569"].ents,
+            offsets=title_clusters["D001569"].offsets + abstract_clusters["D001569"].offsets,
             label="Chemical",
         ),
         "D005221": schemas.PubtatorCluster(
@@ -513,6 +349,125 @@ def test_parse_pubtator_compound_ent() -> None:
         },
     )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.both)
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
+
+
+def test_query_pubtator() -> None:
+    pmid = "19285439"
+    title_text = (
+        "The ubiquitin ligase RNF5 regulates antiviral responses by mediating degradation"
+        " of the adaptor protein MITA."
+    )
+    abstract_text = (
+        "Viral infection activates transcription factors NF-kappaB and IRF3, which collaborate to"
+        " induce type I interferons (IFNs) and elicit innate antiviral response. MITA (also known"
+        " as STING) has recently been identified as an adaptor that links virus-sensing receptors"
+        " to IRF3 activation. Here, we showed that the E3 ubiquitin ligase RNF5 interacted with"
+        " MITA in a viral-infection-dependent manner. Overexpression of RNF5 inhibited"
+        " virus-triggered IRF3 activation, IFNB1 expression, and cellular antiviral response,"
+        " whereas knockdown of RNF5 had opposite effects. RNF5 targeted MITA at Lys150 for"
+        " ubiquitination and degradation after viral infection. Both MITA and RNF5 were located at"
+        " the mitochondria and endoplasmic reticulum (ER) and viral infection caused their"
+        " redistribution to the ER and mitochondria, respectively. We further found that"
+        " virus-induced ubiquitination and degradation of MITA by RNF5 occurred at the"
+        " mitochondria. These findings suggest that RNF5 negatively regulates virus-triggered"
+        " signaling by targeting MITA for ubiquitination and degradation at the mitochondria."
+    )
+    title_clusters = {
+        "6048": schemas.PubtatorCluster(
+            ents=["RNF5"],
+            offsets=[(21, 25)],
+            label="Gene",
+        ),
+        "340061": schemas.PubtatorCluster(ents=["MITA"], offsets=[(104, 108)], label="Gene"),
+    }
+    abstract_clusters = {
+        "4790": schemas.PubtatorCluster(ents=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
+        "3661": schemas.PubtatorCluster(
+            ents=["IRF3", "IRF3", "IRF3"],
+            offsets=[(172, 176), (378, 382), (554, 558)],
+            label="Gene",
+        ),
+        "340061": schemas.PubtatorCluster(
+            ents=["MITA", "STING", "MITA", "MITA", "MITA", "MITA", "MITA"],
+            offsets=[
+                (270, 274),
+                (290, 295),
+                (461, 465),
+                (684, 688),
+                (762, 766),
+                (1000, 1004),
+                (1136, 1140),
+            ],
+            label="Gene",
+        ),
+        "6048": schemas.PubtatorCluster(
+            ents=["RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5"],
+            offsets=[
+                (440, 444),
+                (523, 527),
+                (643, 647),
+                (670, 674),
+                (771, 775),
+                (1008, 1012),
+                (1071, 1075),
+            ],
+            label="Gene",
+        ),
+        "3456": schemas.PubtatorCluster(ents=["IFNB1"], offsets=[(571, 576)], label="Gene"),
+    }
+    both_clusters = {
+        "6048": schemas.PubtatorCluster(
+            ents=title_clusters["6048"].ents + abstract_clusters["6048"].ents,
+            offsets=title_clusters["6048"].offsets + abstract_clusters["6048"].offsets,
+            label="Gene",
+        ),
+        "340061": schemas.PubtatorCluster(
+            ents=title_clusters["340061"].ents + abstract_clusters["340061"].ents,
+            offsets=title_clusters["340061"].offsets + abstract_clusters["340061"].offsets,
+            label="Gene",
+        ),
+        "4790": schemas.PubtatorCluster(ents=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
+        "3661": schemas.PubtatorCluster(
+            ents=abstract_clusters["3661"].ents,
+            offsets=abstract_clusters["3661"].offsets,
+            label="Gene",
+        ),
+        "3456": schemas.PubtatorCluster(ents=["IFNB1"], offsets=[(571, 576)], label="Gene"),
+    }
+
+    # Title only
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=title_text, clusters=title_clusters, relations=[]
+    )
+    actual = util.query_pubtator(
+        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.title
+    )
+    # Breaking up the asserts leads to much clearer outputs when the test fails
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
+
+    # Abstract only
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=abstract_text, clusters=abstract_clusters, relations=[]
+    )
+    actual = util.query_pubtator(
+        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.abstract
+    )
+    assert actual[0].text == expected.text
+    assert actual[0].clusters == expected.clusters
+    assert actual[0].relations == expected.relations
+
+    # Both
+    expected = schemas.PubtatorAnnotation(
+        pmid=pmid, text=f"{title_text} {abstract_text}", clusters=both_clusters, relations=[]
+    )
+    actual = util.query_pubtator(
+        pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.both
+    )
     assert actual[0].text == expected.text
     assert actual[0].clusters == expected.clusters
     assert actual[0].relations == expected.relations
