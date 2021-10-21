@@ -69,6 +69,43 @@ def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
     return match
 
 
+# def _mask_ents(
+#     pubtator_annotation: PubtatorAnnotation, mask_frac: float = 0.10
+# ) -> List[PubtatorAnnotation]:
+#     """"""
+#     # If mask_frac is falsey, this is a no-op.
+#     if not mask_frac:
+#         return pubtator_annotation
+
+#     # Determine the number of entities to mask and then randomly sample them.
+#     k = int(len(pubtator_annotation.clusters) * mask_frac)
+#     to_mask = random.sample(list(pubtator_annotation.clusters), k)
+
+#     # Loop over the entities to mask.
+#     # Replace their mentions with a mask token and accumulate their current offsets.
+#     current_offsets = []
+#     for cluster_id in to_mask:
+#         cluster = pubtator_annotation.clusters[cluster_id]
+#         cluster.ents = [ENT_MASK] * len(cluster.ents)
+#         current_offsets.extend(cluster.offsets)
+
+#     # Replace each mention in the text with a mask token. We maintain a running offset
+#     # that we use to update the original character offsets. For this to work, we must mask
+#     # in order of first appearence.
+#     running_offset = 0
+#     current_offsets = sorted(current_offsets, key=itemgetter(0))
+#     for start, end in current_offsets:
+#         masked_ent_len = end - start
+#         start += running_offset
+#         end += running_offset
+#         pubtator_annotation.text = (
+#             f"{pubtator_annotation.text[:start]}{ENT_MASK}{pubtator_annotation.text[end:]}"
+#         )
+#         running_offset += len(ENT_MASK) - masked_ent_len
+
+#     return pubtator_annotation
+
+
 def _query_pubtator(body: Dict[str, Any], **kwargs: Any):
     r = s.post(PUBTATOR_API_URL, json=body)
     pubtator_content = r.text.strip()
@@ -261,10 +298,11 @@ def pubtator_to_seq2rel(
     document_annotations: List[PubtatorAnnotation],
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
+    mask_frac: Optional[float] = None,
     **kwargs: Any,
 ) -> List[str]:
-    """Converts the highly structured `pubtator_annotations` input to a format that can be used with
-    seq2rel. Optional `**kwargs` are passed to `query_pubtator` when `entity_hinting == "pipeline"`.
+    """Converts the highly structured `pubtator_annotations` input to a format that can be used
+    with seq2rel. Optional `**kwargs` are passed to `query_pubtator` when `entity_hinting == "pipeline"`.
 
     # Parameters
 
@@ -277,7 +315,15 @@ def pubtator_to_seq2rel(
         True if entity markers should be included within the source text. This effectively converts
         the end-to-end relation extraction problem to a pipeline relation extraction approach, where
         entities are given.
+    mask_frac : float, optional (default = `None`)
+        If provided, this fraction of entities are replaced with a special mask token
+        (`seq2rel_ds.common.util.ENT_MASK`).
     """
+    # Optionally, mask out some fraction of entities.
+    # document_annotations = [
+    #     _mask_ents(doc_ann, mask_frac=mask_frac) for doc_ann in document_annotations
+    # ]
+
     seq2rel_annotations = []
 
     pmids = [ann.pmid for ann in document_annotations]
