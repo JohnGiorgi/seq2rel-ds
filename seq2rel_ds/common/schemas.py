@@ -15,7 +15,7 @@ class AlignedExample(BaseModel):
 class PubtatorCluster(BaseModel):
     """A Pydantic model for storing coreferent entity annotations."""
 
-    ents: List[str]
+    mentions: List[str]
     offsets: List[Tuple[int, int]]
     label: str
 
@@ -25,7 +25,7 @@ class PubtatorCluster(BaseModel):
         """
         unique_mentions: List[str] = []
         unique_offsets: List[Tuple[int, int]] = []
-        for mention, offsets in zip(self.ents, self.offsets):
+        for mention, offsets in zip(self.mentions, self.offsets):
             if mention.lower() not in [m.lower() for m in unique_mentions]:
                 unique_mentions.append(mention)
                 unique_offsets.append(offsets)

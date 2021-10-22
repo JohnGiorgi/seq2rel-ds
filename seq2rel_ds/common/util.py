@@ -99,19 +99,23 @@ def download_zip(url: str) -> ZipFile:
     return z
 
 
-def format_relation(ent_clusters: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
-    """Given an arbitrary number of coreferent mentions (`ent_clusters`), a label for each of those
-    mentions (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted string
+def format_relation(ents: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
+    """Given an arbitrary number of entities (`ents`), a label for each of those entities
+    (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted target string
     that can be used to train a seq2rel model.
     """
-    formatted_rel = ""
-    for ents, label in zip(ent_clusters, ent_labels):
-        # Only retain unique mentions (case-insensitive).
-        unique_ents = list(dict.fromkeys(ent.lower() for ent in ents))
-        formatted_ents = sanitize_text(
-            f"{special_tokens.COREF_SEP_SYMBOL} ".join(unique_ents), lowercase=True
+    if len(ents) != len(ent_labels):
+        raise ValueError(
+            f"Got differing number of ents ({len(ents)}) and ent_labels ({len(ent_labels)})"
         )
-        formatted_rel += f"{formatted_ents} @{label.strip().upper()}@ "
+    formatted_rel = ""
+    for mentions, label in zip(ents, ent_labels):
+        # Only retain unique mentions (case-insensitive).
+        unique_mentions = list(dict.fromkeys(mention.lower() for mention in mentions))
+        formatted_ent = sanitize_text(
+            f"{special_tokens.COREF_SEP_SYMBOL} ".join(unique_mentions), lowercase=True
+        )
+        formatted_rel += f"{formatted_ent} @{label.strip().upper()}@ "
     formatted_rel += f"@{rel_label.strip().upper()}@"
     return formatted_rel
 
@@ -198,9 +202,9 @@ def parse_pubtator(
             # This is a entity mention
             if sorting_utils.pubtator_ann_is_mention(split_ann):
                 if len(split_ann) == 6:
-                    _, start, end, ents, label, uids = split_ann
+                    _, start, end, mentions, label, uids = split_ann
                 elif len(split_ann) == 7:
-                    _, start, end, _, label, uids, ents = split_ann
+                    _, start, end, _, label, uids, mentions = split_ann
                 # For some cases (like distant supervision) it is
                 # convenient to skip annotations that are malformed.
                 else:
@@ -220,16 +224,16 @@ def parse_pubtator(
                 # individual entities in a compound entity. So we deal with that here.
                 # Note that the start & end indicies will no longer be exactly correct, but are
                 # be close enough for our purposes of sorting entities by order of appearence.
-                ents, uids = ents.split("|"), uids.split("|")  # type: ignore
-                for ent, uid in zip(ents, uids):
+                mentions, uids = mentions.split("|"), uids.split("|")  # type: ignore
+                for mention, uid in zip(mentions, uids):
                     # Ignore this annotation if the entity is not grounded.
                     # à la: https://www.aclweb.org/anthology/D19-1498/
                     if uid == "-1":
                         continue
 
                     # If this is a compound entity update the offsets to be as correct as possible.
-                    if len(ents) > 1:
-                        match = _search_ent(ent, text[start:end])
+                    if len(mentions) > 1:
+                        match = _search_ent(mention, text[start:end])
                         adj_start, adj_end = match.span()
                         adj_start += start
                         adj_end += start
@@ -237,11 +241,11 @@ def parse_pubtator(
                         adj_start, adj_end = start, end
 
                     if uid in parsed[-1].clusters:
-                        parsed[-1].clusters[uid].ents.append(ent)
+                        parsed[-1].clusters[uid].mentions.append(mention)
                         parsed[-1].clusters[uid].offsets.append((adj_start, adj_end))
                     else:
                         parsed[-1].clusters[uid] = PubtatorCluster(
-                            ents=[ent], offsets=[(adj_start, adj_end)], label=label
+                            mentions=[mention], offsets=[(adj_start, adj_end)], label=label
                         )
             # This is a relation
             else:
@@ -308,10 +312,10 @@ def pubtator_to_seq2rel(
             offset = sum(
                 min(doc_ann.clusters[id_].offsets, key=itemgetter(1))[1] for id_ in ent_ids
             )
-            ent_clusters = [doc_ann.clusters[id_].ents for id_ in ent_ids]
+            ents = [doc_ann.clusters[id_].mentions for id_ in ent_ids]
             ent_labels = [doc_ann.clusters[id_].label for id_ in ent_ids]
             relation = format_relation(
-                ent_clusters=ent_clusters,
+                ents=ents,
                 ent_labels=ent_labels,
                 rel_label=rel_label,
             )
