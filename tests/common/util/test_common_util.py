@@ -66,15 +66,17 @@ def test_download_zip() -> None:
 
 
 def test_format_relation() -> None:
-    ent_clusters = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
+    ents = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
     # Add trailing and leading spaces throughout to ensure they are handled.
     rel_label = "PRGE "
     ent_labels = ["GENE", " GENE", "GENE "]
     expected = "mita ; sting @GENE@ nf-kappab @GENE@ irf3 @GENE@ @PRGE@"
-    actual = util.format_relation(
-        ent_clusters=ent_clusters, ent_labels=ent_labels, rel_label=rel_label
-    )
+    actual = util.format_relation(ents=ents, ent_labels=ent_labels, rel_label=rel_label)
     assert actual == expected
+
+    # Assert a value error is raised if the number of entities does not match the number of labels.
+    with pytest.raises(ValueError):
+        _ = util.format_relation(ents=ents[1:], ent_labels=ent_labels, rel_label="")
 
 
 def test_train_valid_test_split():
@@ -131,29 +133,29 @@ def test_parse_pubtator() -> None:
 
     title_clusters = {
         "D001569": schemas.PubtatorCluster(
-            ents=["benzodiazepines"],
+            mentions=["benzodiazepines"],
             offsets=[(28, 43)],
             label="Chemical",
         ),
     }
     abstract_clusters = {
         "D001569": schemas.PubtatorCluster(
-            ents=["benzodiazepines", "BZDs", "BZDs"],
+            mentions=["benzodiazepines", "BZDs", "BZDs"],
             offsets=[(219, 234), (253, 257), (583, 587)],
             label="Chemical",
         ),
         "D005221": schemas.PubtatorCluster(
-            ents=["tiredness"], offsets=[(1817, 1826)], label="Disease"
+            mentions=["tiredness"], offsets=[(1817, 1826)], label="Disease"
         ),
     }
     both_clusters = {
         "D001569": schemas.PubtatorCluster(
-            ents=title_clusters["D001569"].ents + abstract_clusters["D001569"].ents,
+            mentions=title_clusters["D001569"].mentions + abstract_clusters["D001569"].mentions,
             offsets=title_clusters["D001569"].offsets + abstract_clusters["D001569"].offsets,
             label="Chemical",
         ),
         "D005221": schemas.PubtatorCluster(
-            ents=["tiredness"], offsets=[(1817, 1826)], label="Disease"
+            mentions=["tiredness"], offsets=[(1817, 1826)], label="Disease"
         ),
     }
 
@@ -263,18 +265,20 @@ def test_parse_pubtator_compound_ent() -> None:
         text=f"{title_text} {abstract_text}",
         clusters={
             "D019259": schemas.PubtatorCluster(
-                ents=["lamivudine"],
+                mentions=["lamivudine"],
                 offsets=[(26, 36)],
                 label="Chemical",
             ),
-            "D012964": schemas.PubtatorCluster(ents=["na"], offsets=[(59, 61)], label="Chemical"),
+            "D012964": schemas.PubtatorCluster(
+                mentions=["na"], offsets=[(59, 61)], label="Chemical"
+            ),
             "D006509": schemas.PubtatorCluster(
-                ents=["hepatitis B virus (HBV) infected", "HBV infected"],
+                mentions=["hepatitis B virus (HBV) infected", "HBV infected"],
                 offsets=[(66, 98), (186, 209)],
                 label="Disease",
             ),
             "D015658": schemas.PubtatorCluster(
-                ents=["HIV co-infection", "HIV infected"],
+                mentions=["HIV co-infection", "HIV infected"],
                 offsets=[(125, 141), (194, 209)],
                 label="Disease",
             ),
@@ -309,21 +313,21 @@ def test_query_pubtator() -> None:
     )
     title_clusters = {
         "6048": schemas.PubtatorCluster(
-            ents=["RNF5"],
+            mentions=["RNF5"],
             offsets=[(21, 25)],
             label="Gene",
         ),
-        "340061": schemas.PubtatorCluster(ents=["MITA"], offsets=[(104, 108)], label="Gene"),
+        "340061": schemas.PubtatorCluster(mentions=["MITA"], offsets=[(104, 108)], label="Gene"),
     }
     abstract_clusters = {
-        "4790": schemas.PubtatorCluster(ents=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
+        "4790": schemas.PubtatorCluster(mentions=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
         "3661": schemas.PubtatorCluster(
-            ents=["IRF3", "IRF3", "IRF3"],
+            mentions=["IRF3", "IRF3", "IRF3"],
             offsets=[(172, 176), (378, 382), (554, 558)],
             label="Gene",
         ),
         "340061": schemas.PubtatorCluster(
-            ents=["MITA", "STING", "MITA", "MITA", "MITA", "MITA", "MITA"],
+            mentions=["MITA", "STING", "MITA", "MITA", "MITA", "MITA", "MITA"],
             offsets=[
                 (270, 274),
                 (290, 295),
@@ -336,7 +340,7 @@ def test_query_pubtator() -> None:
             label="Gene",
         ),
         "6048": schemas.PubtatorCluster(
-            ents=["RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5"],
+            mentions=["RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5"],
             offsets=[
                 (440, 444),
                 (523, 527),
@@ -348,26 +352,26 @@ def test_query_pubtator() -> None:
             ],
             label="Gene",
         ),
-        "3456": schemas.PubtatorCluster(ents=["IFNB1"], offsets=[(571, 576)], label="Gene"),
+        "3456": schemas.PubtatorCluster(mentions=["IFNB1"], offsets=[(571, 576)], label="Gene"),
     }
     both_clusters = {
         "6048": schemas.PubtatorCluster(
-            ents=title_clusters["6048"].ents + abstract_clusters["6048"].ents,
+            mentions=title_clusters["6048"].mentions + abstract_clusters["6048"].mentions,
             offsets=title_clusters["6048"].offsets + abstract_clusters["6048"].offsets,
             label="Gene",
         ),
         "340061": schemas.PubtatorCluster(
-            ents=title_clusters["340061"].ents + abstract_clusters["340061"].ents,
+            mentions=title_clusters["340061"].mentions + abstract_clusters["340061"].mentions,
             offsets=title_clusters["340061"].offsets + abstract_clusters["340061"].offsets,
             label="Gene",
         ),
-        "4790": schemas.PubtatorCluster(ents=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
+        "4790": schemas.PubtatorCluster(mentions=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
         "3661": schemas.PubtatorCluster(
-            ents=abstract_clusters["3661"].ents,
+            mentions=abstract_clusters["3661"].mentions,
             offsets=abstract_clusters["3661"].offsets,
             label="Gene",
         ),
-        "3456": schemas.PubtatorCluster(ents=["IFNB1"], offsets=[(571, 576)], label="Gene"),
+        "3456": schemas.PubtatorCluster(mentions=["IFNB1"], offsets=[(571, 576)], label="Gene"),
     }
 
     # Title only

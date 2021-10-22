@@ -27,12 +27,12 @@ def test_insert_entity_hints() -> None:
         text=text,
         clusters={
             "348": schemas.PubtatorCluster(
-                ents=["Apolipoprotein E", "apolipoprotein E", "apoE"],
+                mentions=["Apolipoprotein E", "apolipoprotein E", "apoE"],
                 offsets=[(0, 17), (207, 223), (225, 229)],
                 label="Gene",
             ),
             "D000544": schemas.PubtatorCluster(
-                ents=["Alzheimer disease", "Alzheimer disease", "Alzheimer disease"],
+                mentions=["Alzheimer disease", "Alzheimer disease", "Alzheimer disease"],
                 offsets=[(160, 177), (339, 356), (479, 496)],
                 label="Disease",
             ),
@@ -57,10 +57,10 @@ def test_insert_entity_hints_compound() -> None:
         text=text,
         clusters={
             "D002780": schemas.PubtatorCluster(
-                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
+                mentions=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
             ),
             "D001651": schemas.PubtatorCluster(
-                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
+                mentions=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
             ),
         },
     )
@@ -84,12 +84,12 @@ def test_insert_entity_hints_overlapping() -> None:
         text=text,
         clusters={
             "2155": schemas.PubtatorCluster(
-                ents=["coagulation factor VII", "coagulation factor VII"],
+                mentions=["coagulation factor VII", "coagulation factor VII"],
                 offsets=[(44, 67), (222, 244)],
                 label="Gene",
             ),
             "D005168": schemas.PubtatorCluster(
-                ents=["factor VII deficiency", "factor VII deficiency"],
+                mentions=["factor VII deficiency", "factor VII deficiency"],
                 offsets=[(56, 78), (234, 255)],
                 label="Disease",
             ),
@@ -117,10 +117,10 @@ def test_insert_entity_hints_no_mutation() -> None:
         text=text,
         clusters={
             "D002780": schemas.PubtatorCluster(
-                ents=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
+                mentions=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
             ),
             "D001651": schemas.PubtatorCluster(
-                ents=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
+                mentions=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
             ),
         },
     )

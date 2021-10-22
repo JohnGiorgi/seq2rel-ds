@@ -15,8 +15,8 @@ def dummy_annotation_dict() -> Dict[str, Any]:
             " of many genes and affect other regulatory pathways, including mating type."
         ),
         "clusters": {
-            "852410": {"ents": ["cyc8"], "offsets": [[142, 146]], "label": "Gene"},
-            "850445": {"ents": ["tup1"], "offsets": [[150, 154]], "label": "Gene"},
+            "852410": {"mentions": ["cyc8"], "offsets": [[142, 146]], "label": "Gene"},
+            "850445": {"mentions": ["tup1"], "offsets": [[150, 154]], "label": "Gene"},
         },
         "relations": [],
     }
