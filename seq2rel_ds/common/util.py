@@ -296,8 +296,8 @@ def pubtator_to_seq2rel(
         # Apply entity hinting using the requested strategy (if any). In the "pipeline" setting
         # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
         # the ground truth annotations.
-        pubtator_ann = pubtator_annotations.get(doc_ann.pmid)
         if entity_hinting == EntityHinting.pipeline:
+            pubtator_ann = pubtator_annotations.get(doc_ann.pmid)
             if pubtator_ann is None:
                 warnings.warn(
                     f"{entity_hinting} entity hinting strategy selected, but no annotations were found"
