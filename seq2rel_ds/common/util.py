@@ -5,6 +5,7 @@ from enum import Enum
 from operator import itemgetter
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from zipfile import ZipFile
+import warnings
 
 import numpy as np
 import requests
@@ -296,7 +297,13 @@ def pubtator_to_seq2rel(
         # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
         # the ground truth annotations.
         pubtator_ann = pubtator_annotations.get(doc_ann.pmid)
-        if entity_hinting == EntityHinting.pipeline and pubtator_ann is not None:
+        if entity_hinting == EntityHinting.pipeline:
+            if pubtator_ann is None:
+                warnings.warn(
+                    f"{entity_hinting} entity hinting strategy selected, but no annotations were found"
+                    f" for PMID: {doc_ann.pmid}. No entity hints will be inserted for this document."
+                )
+                continue
             pubtator_ann.insert_entity_hints()
             doc_ann.text = pubtator_ann.text
         elif entity_hinting == EntityHinting.gold:
