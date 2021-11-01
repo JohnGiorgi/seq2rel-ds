@@ -2,7 +2,6 @@ import io
 import random
 import re
 from enum import Enum
-from itertools import zip_longest
 from operator import itemgetter
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from zipfile import ZipFile
@@ -69,11 +68,11 @@ def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
     return match
 
 
-def _query_pubtator(body: Dict[str, Any], **kwargs: Any):
+def _query_pubtator(body: Dict[str, Any], **kwargs: Any) -> Dict[str, PubtatorAnnotation]:
     r = s.post(PUBTATOR_API_URL, json=body)
     pubtator_content = r.text.strip()
     pubtator_annotations = parse_pubtator(pubtator_content, **kwargs)
-    return pubtator_annotations
+    return {ann.pmid: ann for ann in pubtator_annotations}
 
 
 # Public functions #
@@ -284,22 +283,20 @@ def pubtator_to_seq2rel(
     """
     seq2rel_annotations = []
 
-    pmids = [ann.pmid for ann in document_annotations]
-
     # If using pipeline-based entity hinting, it is much faster to retrieve the annotations in bulk
-    if entity_hinting == EntityHinting.pipeline:
-        pubtator_annotations = query_pubtator(pmids, **kwargs)
-    else:
-        pubtator_annotations = []
+    pmids = [ann.pmid for ann in document_annotations]
+    pubtator_annotations = (
+        query_pubtator(pmids, **kwargs) if entity_hinting == EntityHinting.pipeline else {}
+    )
 
-    for doc_ann, pubtator_ann in zip_longest(document_annotations, pubtator_annotations):
+    for doc_ann in document_annotations:
         relations = []
         offsets = []
-
         # Apply entity hinting using the requested strategy (if any). In the "pipeline" setting
         # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
         # the ground truth annotations.
-        if entity_hinting == EntityHinting.pipeline and pubtator_ann:
+        pubtator_ann = pubtator_annotations.get(doc_ann.pmid)
+        if entity_hinting == EntityHinting.pipeline and pubtator_ann is not None:
             pubtator_ann.insert_entity_hints()
             doc_ann.text = pubtator_ann.text
         elif entity_hinting == EntityHinting.gold:
@@ -339,7 +336,7 @@ def query_pubtator(
     concepts: Optional[List[str]] = None,
     pmids_per_request: int = 1000,
     **kwargs: Any,
-) -> List[PubtatorAnnotation]:
+) -> Dict[str, PubtatorAnnotation]:
     """Queries PubTator for the given `pmids` and `concepts`, parses the results and
     returns a highly structured dictionary-like object keyed by PMID. Optional `**kwargs` are passed
     to `seq2rel_ds.common.util.parse_pubtator`.
@@ -356,15 +353,15 @@ def query_pubtator(
     body: Dict[str, Any] = {"type": "pmids"}
     if concepts is not None:
         body["concepts"] = concepts
-    annotations = []
+    annotations = {}
     for chunk in chunked(pmids, pmids_per_request):
         # Try to post requests in chunks to speed things up...
         try:
             body["pmids"] = chunk
             pubtator_annotations = _query_pubtator(body, **kwargs)
-            annotations.extend(pubtator_annotations)
+            annotations.update(pubtator_annotations)
         # ...but, if the request fails, recursively half the size of the request.
         except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
             pubtator_annotations = query_pubtator(chunk, concepts, pmids_per_request // 2, **kwargs)
-            annotations.extend(pubtator_annotations)
+            annotations.update(pubtator_annotations)
     return annotations
