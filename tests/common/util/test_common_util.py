@@ -382,6 +382,7 @@ def test_query_pubtator() -> None:
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.title
     )
     # Breaking up the asserts leads to much clearer outputs when the test fails
+    assert len(actual) == 1
     assert actual[expected.pmid].text == expected.text
     assert actual[expected.pmid].clusters == expected.clusters
     assert actual[expected.pmid].relations == expected.relations
@@ -393,6 +394,7 @@ def test_query_pubtator() -> None:
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.abstract
     )
+    assert len(actual) == 1
     assert actual[expected.pmid].text == expected.text
     assert actual[expected.pmid].clusters == expected.clusters
     assert actual[expected.pmid].relations == expected.relations
@@ -404,6 +406,7 @@ def test_query_pubtator() -> None:
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.both
     )
+    assert len(actual) == 1
     assert actual[expected.pmid].text == expected.text
     assert actual[expected.pmid].clusters == expected.clusters
     assert actual[expected.pmid].relations == expected.relations
