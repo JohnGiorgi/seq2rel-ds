@@ -382,9 +382,9 @@ def test_query_pubtator() -> None:
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.title
     )
     # Breaking up the asserts leads to much clearer outputs when the test fails
-    assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
-    assert actual[0].relations == expected.relations
+    assert actual[expected.pmid].text == expected.text
+    assert actual[expected.pmid].clusters == expected.clusters
+    assert actual[expected.pmid].relations == expected.relations
 
     # Abstract only
     expected = schemas.PubtatorAnnotation(
@@ -393,9 +393,9 @@ def test_query_pubtator() -> None:
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.abstract
     )
-    assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
-    assert actual[0].relations == expected.relations
+    assert actual[expected.pmid].text == expected.text
+    assert actual[expected.pmid].clusters == expected.clusters
+    assert actual[expected.pmid].relations == expected.relations
 
     # Both
     expected = schemas.PubtatorAnnotation(
@@ -404,6 +404,6 @@ def test_query_pubtator() -> None:
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.both
     )
-    assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
-    assert actual[0].relations == expected.relations
+    assert actual[expected.pmid].text == expected.text
+    assert actual[expected.pmid].clusters == expected.clusters
+    assert actual[expected.pmid].relations == expected.relations
