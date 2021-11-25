@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 app = typer.Typer()
 
 
-def _convert_to_pubtator(examples: Dict[str, Any]) -> str:
+def _convert_to_pubtator(examples: List[Dict[str, Any]]) -> str:
     """Converts data from the DGM corpus to a PubTator Annotation-like format."""
     pubtator_formatted_anns = []
     for example in examples:
@@ -61,7 +61,7 @@ def _convert_to_pubtator(examples: Dict[str, Any]) -> str:
 
 
 def _preprocess(
-    examples: Dict[str, Any],
+    examples: List[Dict[str, Any]],
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
 ) -> List[str]:
