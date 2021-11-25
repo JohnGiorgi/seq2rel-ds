@@ -104,10 +104,14 @@ def main(
         ),
     ),
 ) -> None:
-    """Download and preprocess the DGM corpus for use with seq2rel."""
+    """Download and preprocess the DGM corpus for use with seq2rel.
+    The corpus can be downloaded at: https://hanover.azurewebsites.net/downloads/naacl2019.aspx.
+    Provide this path as argument `input_dir` to this command. More details about the corpus can be
+    found here: https://arxiv.org/abs/1904.02347. Note that we use the paragraph-length text.
+    Because there are no annotations on the paragraph-level, we use the original validation set as
+    the test set, and hold out `valid_size` fraction of the training set as the validation set.
+    """
     msg.divider("Preprocessing DGM")
-
-    print(valid_size)
 
     data_fp = Path(input_dir) / "data"
     documents_fp = data_fp / "examples" / "paragraph"
