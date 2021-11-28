@@ -32,10 +32,14 @@ def _preprocess(
     kwargs = {"concepts": ["chemical", "disease"], "skip_malformed": True} if entity_hinting else {}
 
     pubtator_annotations = util.parse_pubtator(
-        pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
+        pubtator_content=pubtator_content,
+        text_segment=util.TextSegment.both,
     )
     seq2rel_annotations = util.pubtator_to_seq2rel(
-        pubtator_annotations, sort_rels=sort_rels, entity_hinting=entity_hinting, **kwargs
+        pubtator_annotations,
+        sort_rels=sort_rels,
+        entity_hinting=entity_hinting,
+        **kwargs,
     )
 
     return seq2rel_annotations

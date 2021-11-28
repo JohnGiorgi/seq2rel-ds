@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import requests
 import typer
 from seq2rel_ds import msg
-from seq2rel_ds.common import util
+from seq2rel_ds.common import text_utils, util
 from seq2rel_ds.common.util import EntityHinting
 from sklearn.model_selection import train_test_split
 
@@ -19,7 +19,6 @@ ABSTRACTS_FILENAME = "abstracts.txt"
 ANNS_FILENAME = "anns.txt"
 LABELS_FILENAME = "labels.csv"
 REL_LABEL = "GDA"
-VALID_SIZE = 0.20
 
 
 def _download_corpus() -> Tuple[List[str], List[str]]:
@@ -44,8 +43,8 @@ def _parse_abstracts(abstracts: str) -> Dict[str, Dict[str, str]]:
         article_split = article.strip().split("\n")
         pmid, title = article_split[:2]
         abstract = article_split[2] if len(article_split) == 3 else ""
-        title = util.sanitize_text(title)
-        abstract = util.sanitize_text(abstract)
+        title = text_utils.sanitize_text(title)
+        abstract = text_utils.sanitize_text(abstract)
         parsed_abstracts[pmid] = {"title": title, "abstract": abstract}
     return parsed_abstracts
 
@@ -95,7 +94,8 @@ def _preprocess(
     abstracts, anns, labels = examples
     pubtator_content = _convert_to_pubtator(abstracts=abstracts, anns=anns, labels=labels)
     pubtator_annotations = util.parse_pubtator(
-        pubtator_content=pubtator_content, text_segment=util.TextSegment.both, sort_ents=True
+        pubtator_content=pubtator_content,
+        text_segment=util.TextSegment.both,
     )
 
     seq2rel_annotations = util.pubtator_to_seq2rel(
@@ -119,6 +119,9 @@ def main(
         ),
         case_sensitive=False,
     ),
+    valid_size: float = typer.Option(
+        0.2, help="Fraction of training examples to hold out as a validation set."
+    ),
 ) -> None:
     """Download and preprocess the GDA corpus for use with seq2rel."""
     msg.divider("Preprocessing GDA")
@@ -141,14 +144,15 @@ def main(
         test = _preprocess(test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
     msg.good("Preprocessed the test data.")
 
-    train, valid = train_test_split(train, test_size=VALID_SIZE)
-    msg.info(f"Holding out {VALID_SIZE:.2%} of the training data as a validation set.")
-
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if valid_size and valid_size > 0:
+        msg.info(f"Holding out {valid_size:.2%} of the training data as a validation set.")
+        train, valid = train_test_split(train, test_size=valid_size)
+        (output_dir / "valid.tsv").write_text("\n".join(valid))
+
     (output_dir / "train.tsv").write_text("\n".join(train))
-    (output_dir / "valid.tsv").write_text("\n".join(valid))
     (output_dir / "test.tsv").write_text("\n".join(test))
     msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 

@@ -1,11 +1,10 @@
-import requests
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import requests
 import typer
 from seq2rel_ds import msg
-from seq2rel_ds.common import util
-
+from seq2rel_ds.common import text_utils, util
 
 app = typer.Typer()
 
@@ -37,12 +36,12 @@ def _convert_to_pubtator(
     pubtator_formatted_anns = []
     for doc_id, example in enumerate(examples):
         sents = example["sents"]
-        text = util.sanitize_text(" ".join(" ".join(sent) for sent in sents))
+        text = text_utils.sanitize_text(" ".join(" ".join(sent) for sent in sents))
         pubtator_formatted_ann = f"{doc_id}|t|\n{doc_id}|a|{text}\n"
         for ent_id, ent in enumerate(example["vertexSet"]):
             for mention in ent:
                 start, end = mention["pos"]
-                name = util.sanitize_text(mention["name"])
+                name = text_utils.sanitize_text(mention["name"])
                 type_ = mention["type"]
                 # The start and end indexes are relative to their own sentence.
                 # Account for this to produce document-level offsets.
@@ -75,7 +74,8 @@ def _preprocess(
 ) -> List[str]:
     pubtator_content = _convert_to_pubtator(examples, rel_labels=rel_labels)
     pubtator_annotations = util.parse_pubtator(
-        pubtator_content=pubtator_content, text_segment=util.TextSegment.abstract, sort_ents=True
+        pubtator_content=pubtator_content,
+        text_segment=util.TextSegment.abstract,
     )
     seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations, sort_rels=sort_rels)
 

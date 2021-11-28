@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 import typer
 from boltons import jsonutils
 from seq2rel_ds import msg
-from seq2rel_ds.common import util
-from seq2rel_ds.common.util import EntityHinting, sanitize_text
+from seq2rel_ds.common import text_utils, util
+from seq2rel_ds.common.util import EntityHinting
 from sklearn.model_selection import train_test_split
 
 app = typer.Typer()
@@ -19,7 +19,7 @@ def _convert_to_pubtator(examples: List[Dict[str, Any]]) -> str:
         paragraphs = example["paragraphs"]
         abstract = " ".join([" ".join(paragraph) for paragraph in example["paragraphs"]])
         # The text contains \t and \n, which will cause issues downstream. Replace them with spaces.
-        abstract = sanitize_text(abstract)
+        abstract = text_utils.sanitize_text(abstract)
 
         # Convert the mentions to PubTator format.
         pubtator_mentions = ""
@@ -35,7 +35,7 @@ def _convert_to_pubtator(examples: List[Dict[str, Any]]) -> str:
                 # Find the character offsets of the mention, according to its first appearance.
                 mention_text = " ".join(paragraph[start:end]).strip()
                 # Clean the mention text the same way as the abstract text in order to find a match.
-                mention_text = sanitize_text(mention_text)
+                mention_text = text_utils.sanitize_text(mention_text)
                 char_start = abstract.find(mention_text)
                 char_end = char_start + len(mention_text)
                 pubtator_mentions += (
@@ -73,7 +73,8 @@ def _preprocess(
 
     pubtator_content = _convert_to_pubtator(examples)
     pubtator_annotations = util.parse_pubtator(
-        pubtator_content=pubtator_content, text_segment=util.TextSegment.abstract, sort_ents=True
+        pubtator_content=pubtator_content,
+        text_segment=util.TextSegment.abstract,
     )
     seq2rel_annotations = util.pubtator_to_seq2rel(
         pubtator_annotations, sort_rels=sort_rels, entity_hinting=entity_hinting, **kwargs
