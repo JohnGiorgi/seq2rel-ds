@@ -77,7 +77,7 @@ class TestDGM(Seq2RelDSTestCase):
                 " gefitinib suggested that just 10 % -15 % of the patients presented significant"
                 " response [ 5 ] . Further studies revealed that just the tumor cell with EGFR-TK"
                 " mutation ( L858R , del742-759 ) could match good response to gefitinib [ 6,7 ] ."
-                "\tiressa; gefitinib @DRUG@ egfr-tk @GENE@ l858r @VARIANT@ @DGM@"
+                "\tiressa ; gefitinib @DRUG@ egfr-tk @GENE@ l858r @VARIANT@ @DGM@"
             )
         ]
 

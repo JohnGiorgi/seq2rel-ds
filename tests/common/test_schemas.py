@@ -6,8 +6,58 @@ from seq2rel_ds.common import schemas
 from seq2rel_ds.common.special_tokens import COREF_SEP_SYMBOL, HINT_SEP_SYMBOL
 
 
-def test_insert_entity_hints() -> None:
-    """Asserts that insert_entity_hints works as expected for a list of edge cases."""
+def test_pubtator_cluster_to_string() -> None:
+    ent = schemas.PubtatorCluster(
+        # Contains:
+        # - multi-word mentions
+        # - overlapping mentions
+        # - multiple duplicate mentions
+        # - at least two unique mentions (case-insensitive)
+        # - mentions that are not already ordered by first appearance
+        mentions=[
+            "factor vii deficiency",
+            "factor vii deficiency",
+            "Factor VII Deficiency",
+            "factor vii deficient",
+        ],
+        offsets=[(200, 221), (100, 121), (20, 41), (0, 21)],
+        label="Disease",
+    )
+    # Test with sorting (which is and should be the default)
+    actual = ent.to_string()
+    expected = f"factor vii deficient {COREF_SEP_SYMBOL} factor vii deficiency @DISEASE@"
+    assert actual == expected
+
+    # Test without sorting
+    # Note: because the mentions are randomly sorted when sort=False, we check a couple other
+    # attributes, like length of the string.
+    actual = ent.to_string(sort=False)
+    assert len(actual) == len(expected)
+    assert "factor vii deficient" in actual
+    assert "factor vii deficiency" in actual
+    assert "@DISEASE@" in actual
+    assert COREF_SEP_SYMBOL in actual
+
+
+def test_pubtator_cluster_get_offset() -> None:
+    ent = schemas.PubtatorCluster(
+        # We don't need actual mentions or a label to test this method.
+        mentions=[
+            "",
+            "",
+            "",
+            "",
+        ],
+        offsets=[(200, 221), (100, 121), (20, 41), (0, 21)],
+        label="",
+    )
+    expected = 21
+    actual = ent.get_offset()
+    assert actual == expected
+
+
+def test_insert_hints() -> None:
+    """Asserts that insert_hints works as expected for a list of edge cases."""
     # A truncated example taken from the GDA dataset. It contains a few edge cases:
     # - coreferent mention
     # - entites that differ in case
@@ -38,16 +88,16 @@ def test_insert_entity_hints() -> None:
             ),
         },
     )
-    expected = f"Apolipoprotein E {COREF_SEP_SYMBOL} apoE @GENE@ Alzheimer disease @DISEASE@ {HINT_SEP_SYMBOL} {text}"
+    expected = f"apolipoprotein e {COREF_SEP_SYMBOL} apoe @GENE@ alzheimer disease @DISEASE@ {HINT_SEP_SYMBOL} {text}"
 
-    pubator_annotation.insert_entity_hints()
+    pubator_annotation.insert_hints()
     actual = pubator_annotation.text
 
     assert actual == expected
 
 
-def test_insert_entity_hints_compound() -> None:
-    """Asserts that insert_entity_hints works as expected for compound entities."""
+def test_insert_hints_compound() -> None:
+    """Asserts that insert_hints works as expected for compound entities."""
     text = (
         "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
         " intrahepatic and extrahepatic cholestasis."
@@ -66,14 +116,14 @@ def test_insert_entity_hints_compound() -> None:
     )
     expected = f"intrahepatic cholestasis @DISEASE@ extrahepatic cholestasis @DISEASE@ {HINT_SEP_SYMBOL} {text}"
 
-    pubator_annotation.insert_entity_hints()
+    pubator_annotation.insert_hints()
     actual = pubator_annotation.text
 
     assert actual == expected
 
 
-def test_insert_entity_hints_overlapping() -> None:
-    """Asserts that insert_entity_hints works as expected for overlapping entities."""
+def test_insert_hints_overlapping() -> None:
+    """Asserts that insert_hints works as expected for overlapping entities."""
     text = (
         "Mutation pattern in clinically asymptomatic coagulation factor VII deficiency. A total of"
         " 122 subjects, referred after presurgery screening or checkup for prolonged prothrombin"
@@ -96,18 +146,18 @@ def test_insert_entity_hints_overlapping() -> None:
         },
     )
     expected = (
-        f"coagulation factor VII @GENE@ factor VII deficiency @DISEASE@ {HINT_SEP_SYMBOL} {text}"
+        f"coagulation factor vii @GENE@ factor vii deficiency @DISEASE@ {HINT_SEP_SYMBOL} {text}"
     )
 
-    pubator_annotation.insert_entity_hints()
+    pubator_annotation.insert_hints()
     actual = pubator_annotation.text
 
     assert actual == expected
 
 
-def test_insert_entity_hints_no_mutation() -> None:
+def test_insert_hints_no_mutation() -> None:
 
-    """Asserts that insert_entity_hints does not mutate any attribute beside `text`."""
+    """Asserts that insert_hints does not mutate any attribute beside `text`."""
     text = (
         "Different lobular distributions of altered hepatocyte tight junctions in rat models of"
         " intrahepatic and extrahepatic cholestasis."
@@ -126,12 +176,79 @@ def test_insert_entity_hints_no_mutation() -> None:
     )
     expected = copy.deepcopy(pubator_annotation)
 
-    pubator_annotation.insert_entity_hints()
+    pubator_annotation.insert_hints()
 
     assert pubator_annotation.text != expected.text
     assert pubator_annotation.pmid == expected.pmid
     assert pubator_annotation.clusters == expected.clusters
     assert pubator_annotation.relations == expected.relations
+
+
+def test_pubtator_annotation_to_string() -> None:
+    # Contains:
+    # - at least one entity with multiple mentions, including a unique mention
+    # - at least two relations with different head entities
+    # - at least one n-ary relation
+    # - relations that are not already ordered by first appearance
+    ann = schemas.PubtatorAnnotation(
+        # We don't need text or a PMID to test this method.
+        pmid="",
+        text="",
+        clusters={
+            "D008094": schemas.PubtatorCluster(
+                mentions=["lithium", "lithium", "Li", "Li"],
+                offsets=[(54, 61), (111, 118), (941, 943), (1333, 1335)],
+                label="Chemical",
+            ),
+            "D006973": schemas.PubtatorCluster(
+                mentions=["hypertension", "hypertension"],
+                offsets=[(1000, 1012), (1500, 1512)],
+                label="Disease",
+            ),
+            "D011507": schemas.PubtatorCluster(
+                mentions=["proteinuria", "proteinuria"],
+                offsets=[(975, 986), (1466, 1477)],
+                label="Disease",
+            ),
+            "D007676": schemas.PubtatorCluster(
+                mentions=["chronic renal failure", "chronic renal failure"],
+                offsets=[(70, 91), (1531, 1552)],
+                label="Disease",
+            ),
+        },
+        relations=[
+            ("D008094", "D006973", "CID"),
+            ("D008094", "D011507", "CID"),
+            ("D008094", "D007676", "CID"),
+            # This is an artificial n-ary relation.
+            ("D008094", "D006973", "D011507", "CID"),
+        ],
+    )
+
+    # Test with sorting (which is and should be the default)
+    actual = ann.to_string()
+    expected = (
+        f"lithium {COREF_SEP_SYMBOL} li @CHEMICAL@ chronic renal failure @DISEASE@ @CID@"
+        f" lithium {COREF_SEP_SYMBOL} li @CHEMICAL@ proteinuria @DISEASE@ @CID@"
+        f" lithium {COREF_SEP_SYMBOL} li @CHEMICAL@ hypertension @DISEASE@ @CID@"
+        f" lithium {COREF_SEP_SYMBOL} li @CHEMICAL@ hypertension @DISEASE@ proteinuria @DISEASE@ @CID@"
+    )
+    assert actual == expected
+
+    # Test without sorting
+    # Note: because the mentions are randomly sorted when sort=False, we check a couple other
+    # attributes, like length of the string.
+    actual = ann.to_string(sort=False)
+    assert len(actual) == len(expected)
+    assert "lithium" in actual
+    assert "li" in actual
+    assert "chronic renal failure" in actual
+    assert "proteinuria" in actual
+    assert "hypertension" in actual
+    assert "@CHEMICAL@" in actual
+    assert "@DISEASE@" in actual
+    assert "@CID@" in actual
+    assert COREF_SEP_SYMBOL in actual
 
 
 def test_pydantic_encoder(dummy_annotation_pydantic) -> None:

@@ -1,13 +1,8 @@
 import random
-import re
 
 import numpy as np
 import pytest
-from hypothesis import given
-from hypothesis.strategies import booleans, text
 from seq2rel_ds.common import schemas, util
-
-# Private functions #
 
 
 def test_search_ent() -> None:
@@ -28,32 +23,12 @@ def test_search_ent() -> None:
     assert match.span() == (0, 19)
 
 
-# Public functions #
-
-
 def test_set_seeds() -> None:
     # As it turns out, it is quite hard to determine the current random
     # seed. I was able to determine how for numpy, but not python or tensorflow.
     # See: https://stackoverflow.com/a/49749486/6578628
     util.set_seeds()
     assert np.random.get_state()[1][0] == util.NUMPY_SEED
-
-
-@given(text=text(), lowercase=booleans())
-def test_sanitize_text(text: str, lowercase: bool) -> None:
-    sanitized_text = util.sanitize_text(text, lowercase=lowercase)
-
-    # There should be no cases of multiple spaces or tabs
-    assert re.search(r"[ ]{2,}", sanitized_text) is None
-    assert "\t" not in sanitized_text
-    # The beginning and end of the string should be stripped of whitespace
-    assert not sanitized_text.startswith(("\n", " "))
-    assert not sanitized_text.endswith(("\n", " "))
-    # Sometimes, hypothesis generates text that cannot be lowercased (like latin characters).
-    # We don't particularly care about this, and it breaks this check.
-    # Only run if the generated text can be lowercased.
-    if lowercase and text.lower().islower():
-        assert all(not char.isupper() for char in sanitized_text)
 
 
 def test_download_zip() -> None:
@@ -63,20 +38,6 @@ def test_download_zip() -> None:
     _ = z.read("zip_10MB/file_example_ODS_5000.ods")
     _ = z.read("zip_10MB/file_example_PPT_1MB.ppt")
     _ = z.read("zip_10MB/file-sample_1MB.doc")
-
-
-def test_format_relation() -> None:
-    ents = [["MITA ", "STING"], [" NF-kappaB"], ["IRF3"]]
-    # Add trailing and leading spaces throughout to ensure they are handled.
-    rel_label = "PRGE "
-    ent_labels = ["GENE", " GENE", "GENE "]
-    expected = "mita ; sting @GENE@ nf-kappab @GENE@ irf3 @GENE@ @PRGE@"
-    actual = util.format_relation(ents=ents, ent_labels=ent_labels, rel_label=rel_label)
-    assert actual == expected
-
-    # Assert a value error is raised if the number of entities does not match the number of labels.
-    with pytest.raises(ValueError):
-        _ = util.format_relation(ents=ents[1:], ent_labels=ent_labels, rel_label="")
 
 
 def test_train_valid_test_split():
