@@ -1,17 +1,16 @@
 import io
 import random
 import re
+import warnings
 from enum import Enum
-from operator import itemgetter
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from zipfile import ZipFile
-import warnings
 
 import numpy as np
 import requests
 from more_itertools import chunked
 from requests.adapters import HTTPAdapter
-from seq2rel_ds.common import sorting_utils, special_tokens
+from seq2rel_ds.common import sorting_utils
 from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 from sklearn.model_selection import train_test_split
 from urllib3.util.retry import Retry
@@ -85,39 +84,11 @@ def set_seeds() -> None:
     np.random.seed(NUMPY_SEED)
 
 
-def sanitize_text(text: str, lowercase: bool = False) -> str:
-    """Cleans text by removing whitespace, newlines and tabs and (optionally) lowercasing."""
-    sanitized_text = " ".join(text.strip().split())
-    sanitized_text = sanitized_text.lower() if lowercase else sanitized_text
-    return sanitized_text
-
-
 def download_zip(url: str) -> ZipFile:
     # https://stackoverflow.com/a/23419450/6578628
     r = requests.get(url)
     z = ZipFile(io.BytesIO(r.content))
     return z
-
-
-def format_relation(ents: List[List[str]], ent_labels: List[str], rel_label: str) -> str:
-    """Given an arbitrary number of entities (`ents`), a label for each of those entities
-    (`ent_labels`) and a label for the relation (`rel_label`) returns a formatted target string
-    that can be used to train a seq2rel model.
-    """
-    if len(ents) != len(ent_labels):
-        raise ValueError(
-            f"Got differing number of ents ({len(ents)}) and ent_labels ({len(ent_labels)})"
-        )
-    formatted_rel = ""
-    for mentions, label in zip(ents, ent_labels):
-        # Only retain unique mentions (case-insensitive).
-        unique_mentions = list(dict.fromkeys(mention.lower() for mention in mentions))
-        formatted_ent = sanitize_text(
-            f"{special_tokens.COREF_SEP_SYMBOL} ".join(unique_mentions), lowercase=True
-        )
-        formatted_rel += f"{formatted_ent} @{label.strip().upper()}@ "
-    formatted_rel += f"@{rel_label.strip().upper()}@"
-    return formatted_rel
 
 
 def train_valid_test_split(
@@ -144,7 +115,6 @@ def train_valid_test_split(
 def parse_pubtator(
     pubtator_content: str,
     text_segment: TextSegment = TextSegment.both,
-    sort_ents: bool = True,
     skip_malformed: bool = False,
 ) -> List[PubtatorAnnotation]:
     """Parses a PubTator formatted string (`pubtator_content`) and returns a list of
@@ -157,9 +127,6 @@ def parse_pubtator(
     text_segment : `TextSegment`, optional (default = `TextSegment.both`)
         Which segment of the text we should consider. Valid values are `TextSegment.title`,
         `TextSegment.abstract` or `TextSegment.both`.
-    sort_ents : bool, optional (default = `True`)
-        Whether entities should be sorted by order of first appearence. This useful for traditional
-        seq2seq models that use an order-sensitive loss function, like negative log likelihood.
     skip_malformed : bool, optional (default = `False`)
         True if we should ignore malformed annotations that cannot be parsed. This is useful in
         some cases, like when we are generating data using distant supervision.
@@ -173,12 +140,13 @@ def parse_pubtator(
         # Extract the title and abstract (if it exists)
         split_article = article.strip().split("\n")
         title, abstract, annotations = split_article[0], split_article[1], split_article[2:]
-        if sort_ents:
-            annotations = sorting_utils.sort_entity_annotations(annotations)
         pmid, title = title.split("|t|")
         abstract = abstract.split("|a|")[-1]
         title = title.strip()
         abstract = abstract.strip()
+
+        # Sort mentions by order of first appearance
+        annotations = sorting_utils.sort_entity_annotations(annotations)
 
         # We may want to experiement with different text sources
         if text_segment.value == "both":
@@ -291,8 +259,6 @@ def pubtator_to_seq2rel(
     )
 
     for doc_ann in document_annotations:
-        relations = []
-        offsets = []
         # Apply entity hinting using the requested strategy (if any). In the "pipeline" setting
         # we use the annotations from PubTator to determine the entity hints. Otherwise, we use
         # the ground truth annotations.
@@ -300,40 +266,18 @@ def pubtator_to_seq2rel(
             pubtator_ann = pubtator_annotations.get(doc_ann.pmid)
             if pubtator_ann is None:
                 warnings.warn(
-                    f"{entity_hinting} entity hinting strategy selected, but no annotations were found"
-                    f" for PMID: {doc_ann.pmid}. No entity hints will be inserted for this document."
+                    f"{entity_hinting} entity hinting strategy selected, but no annotations found"
+                    f" for PMID: {doc_ann.pmid}. No hints will be inserted for this document."
                 )
                 continue
-            pubtator_ann.insert_entity_hints()
+            pubtator_ann.insert_hints()
             doc_ann.text = pubtator_ann.text
         elif entity_hinting == EntityHinting.gold:
-            doc_ann.insert_entity_hints()
+            doc_ann.insert_hints()
 
-        for rel in doc_ann.relations:
-            ent_ids, rel_label = rel[:-1], rel[-1]
-            # If `sort_rels`, we will sort relations in order of first appearance.
-            # To determine order, use the sum of the min end offsets of each cluster.
-            offset = sum(
-                min(doc_ann.clusters[id_].offsets, key=itemgetter(1))[1] for id_ in ent_ids
-            )
-            ents = [doc_ann.clusters[id_].mentions for id_ in ent_ids]
-            ent_labels = [doc_ann.clusters[id_].label for id_ in ent_ids]
-            relation = format_relation(
-                ents=ents,
-                ent_labels=ent_labels,
-                rel_label=rel_label,
-            )
-            relations.append(relation)
-            offsets.append(offset)
-
-        # This option mainly exists for the purposes of ablation.
-        # To make this clearer, shuffle relations in random order if `sort_rels` is False.
-        if relations and sort_rels:
-            relations = sorting_utils.sort_by_offset(relations, offsets)
-        else:
-            random.shuffle(relations)
-
-        seq2rel_annotations.append(f"{doc_ann.text}\t{' '.join(relations)}")
+        relation_string = doc_ann.to_string(sort=sort_rels)
+        seq2rel_annotation = f"{doc_ann.text.strip()}\t{relation_string.strip()}"
+        seq2rel_annotations.append(seq2rel_annotation)
 
     return seq2rel_annotations
 
