@@ -3,7 +3,7 @@ import random
 import re
 import warnings
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from zipfile import ZipFile
 
 import numpy as np
@@ -25,7 +25,7 @@ PUBTATOR_API_URL = "https://www.ncbi.nlm.nih.gov/research/pubtator-api/publicati
 
 # Enums
 class TextSegment(str, Enum):
-    title = "title"
+    title = "title"  # type: ignore
     abstract = "abstract"
     both = "both"
 
@@ -50,7 +50,7 @@ s.mount("https://", HTTPAdapter(max_retries=retries))
 # Private functions #
 
 
-def _search_ent(ent: str, text: str) -> Union[re.Match, None]:
+def _search_ent(ent: str, text: str) -> Optional[re.Match]:
     """Search for the first occurance of `ent` in `text`, returning an `re.Match` object if found
     and `None` otherwise.
     """
@@ -168,11 +168,13 @@ def parse_pubtator(
             split_ann = ann.strip().split("\t")
 
             # This is a entity mention
+            start: int
+            end: int
             if sorting_utils.pubtator_ann_is_mention(split_ann):
                 if len(split_ann) == 6:
-                    _, start, end, mentions, label, uids = split_ann
+                    _, start, end, mentions, label, uids = split_ann  # type: ignore
                 elif len(split_ann) == 7:
-                    _, start, end, _, label, uids, mentions = split_ann
+                    _, start, end, _, label, uids, mentions = split_ann  # type: ignore
                 # For some cases (like distant supervision) it is
                 # convenient to skip annotations that are malformed.
                 else:
@@ -181,10 +183,10 @@ def parse_pubtator(
                     else:
                         err_msg = f"Found an annotation with an unexpected number of columns: {ann}"
                         raise ValueError(err_msg)
-                start, end = int(start), int(end)  # type: ignore
+                start, end = int(start), int(end)
 
                 # Ignore this annotation if it is not in the chosen text segment
-                section = "title" if int(start) < len(title) else "abstract"
+                section = "title" if start < len(title) else "abstract"
                 if section != text_segment.value and text_segment.value != "both":
                     continue
 
@@ -202,9 +204,10 @@ def parse_pubtator(
                     # If this is a compound entity update the offsets to be as correct as possible.
                     if len(mentions) > 1:
                         match = _search_ent(mention, text[start:end])
-                        adj_start, adj_end = match.span()
-                        adj_start += start
-                        adj_end += start
+                        if match is not None:
+                            adj_start, adj_end = match.span()
+                            adj_start += start
+                            adj_end += start
                     else:
                         adj_start, adj_end = start, end
 
@@ -217,7 +220,7 @@ def parse_pubtator(
                         )
             # This is a relation
             else:
-                _, label, *uids = split_ann
+                _, label, *uids = split_ann  # type: ignore
                 rel = (*uids, label)
                 # Check that the relations entities are in the text
                 # and that this relation is unique.
