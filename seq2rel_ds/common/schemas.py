@@ -32,7 +32,7 @@ class PubtatorCluster(BaseModel):
         # This exists mainly for ablation, so we randomly shuffle mentions if sort=False.
         offsets = [end for _, end in self.offsets]
         if sort:
-            mentions = sorting_utils.sort_by_offset(mentions, offsets)
+            mentions, _ = sorting_utils.sort_by_offset(mentions, offsets)
         else:
             random.shuffle(mentions)
         # Remove duplicates (case-insensitive) but maintain order.
@@ -68,7 +68,7 @@ class PubtatorAnnotation(BaseModel):
         # Optionally, sort by order of first appearance using the end character offsets.
         # This exists mainly for ablation, so we randomly shuffle entities if sort=False.
         if sort:
-            entity_strings = sorting_utils.sort_by_offset(entity_strings, entity_offsets)
+            entity_strings, _ = sorting_utils.sort_by_offset(entity_strings, entity_offsets)
         else:
             random.shuffle(entity_strings)
         # Remove duplicates but maintain order.
@@ -95,7 +95,13 @@ class PubtatorAnnotation(BaseModel):
         # Optionally, sort by order of first appearance.
         # This exists mainly for ablation, so we randomly shuffle relations if sort=False.
         if sort:
-            relation_strings = sorting_utils.sort_by_offset(relation_strings, relation_offsets)
+            # We may encounter relations with identical entities but in a different order or with a
+            # different relation type. To handle this case, first sort relation strings
+            # lexographically and then by offset.
+            relation_strings, relation_offsets = sorting_utils.sort_by_offset(
+                relation_strings, relation_offsets, key=None
+            )
+            relation_strings, _ = sorting_utils.sort_by_offset(relation_strings, relation_offsets)
         else:
             random.shuffle(relation_strings)
         # Remove duplicates but maintain order.
