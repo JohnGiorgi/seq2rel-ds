@@ -115,7 +115,7 @@ def main(
     msg.divider("Preprocessing DGM")
 
     data_fp = Path(input_dir) / "data"
-    documents_fp = data_fp / "examples" / "paragraph"
+    documents_fp = data_fp / "examples_v2" / "paragraph"
     train_fp = documents_fp / "ds_train_dev.txt"
 
     if entity_hinting == EntityHinting.pipeline:
