@@ -36,16 +36,37 @@ def test_sort_by_offset() -> None:
     offsets = []
 
     # Check that this is an no-op if items is empty.
-    expected: List[str] = []
+    expected: List[str] = ([], [])
     actual = sorting_utils.sort_by_offset([], [])
 
     assert actual == expected
 
     items = ["b", "c", "a"]
-    offsets = [1, 2, 0]
+    offsets = [1, 0, 2]
 
-    expected = ["a", "b", "c"]
+    expected = (["c", "b", "a"], [0, 1, 2])
     actual = sorting_utils.sort_by_offset(items, offsets)
+
+    assert actual == expected
+    # Check that we did not mutate the input
+    assert items == ["b", "c", "a"]
+
+
+def test_sort_by_offset_with_key() -> None:
+    items = []
+    offsets = []
+
+    # Check that this is an no-op if items is empty.
+    expected: List[str] = ([], [])
+    actual = sorting_utils.sort_by_offset([], [], key=None)
+
+    assert actual == expected
+
+    items = ["b", "c", "a"]
+    offsets = [1, 0, 2]
+
+    expected = (["a", "b", "c"], [2, 1, 0])
+    actual = sorting_utils.sort_by_offset(items, offsets, key=None)
 
     assert actual == expected
     # Check that we did not mutate the input
