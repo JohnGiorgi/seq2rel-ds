@@ -50,21 +50,19 @@ s.mount("https://", HTTPAdapter(max_retries=retries))
 # Private functions #
 
 
-def _search_ent(ent: str, text: str) -> Optional[re.Match]:
-    """Search for the first occurance of `ent` in `text`, returning an `re.Match` object if found
-    and `None` otherwise.
+def _first_mention(string: str, text: str, **kwargs: Any) -> Optional[re.Match]:
+    """Search for the first occurrence of `string` in `text`, returning an `re.Match` object if
+    found and `None` otherwise. To match `string` to `text` more accurately, we use a type of
+    "backoff" strategy. First, we look for the whole entity in text. If we cannot find it, we look
+    for a lazy match of its first and last tokens. `**kwargs` are passed to `Pattern.search`.
     """
-    # To match ent to text most accurately, we use a type of "backoff" strategy. First, we look for
-    # the whole entity in text. If we cannot find it, we look for a lazy match of its first and last
-    # tokens. In both cases, we look for whole word matches first (considering word boundaries).
-    match = re.search(fr"\b{re.escape(ent)}\b", text) or re.search(re.escape(ent), text)
+    match = re.compile(fr"\b{re.escape(string)}\b").search(text, **kwargs)
+
     if not match:
-        ent_split = ent.split()
+        ent_split = string.split()
         if len(ent_split) > 1:
             first, last = re.escape(ent_split[0]), re.escape(ent_split[-1])
-            match = re.search(fr"\b{first}.*?{last}\b", text) or re.search(
-                fr"{first}.*?{last}", text
-            )
+            match = re.compile(fr"\b{first}.*?{last}\b").search(text, **kwargs)
     return match
 
 
@@ -201,22 +199,20 @@ def parse_pubtator(
                     if uid == "-1":
                         continue
 
+                    offset = (start, end)
+
                     # If this is a compound entity update the offsets to be as correct as possible.
                     if len(mentions) > 1:
-                        match = _search_ent(mention, text[start:end])
+                        match = _first_mention(mention, text, pos=start, endpos=end)
                         if match is not None:
-                            adj_start, adj_end = match.span()
-                            adj_start += start
-                            adj_end += start
-                    else:
-                        adj_start, adj_end = start, end
+                            offset = match.span()
 
                     if uid in parsed[-1].clusters:
                         parsed[-1].clusters[uid].mentions.append(mention)
-                        parsed[-1].clusters[uid].offsets.append((adj_start, adj_end))
+                        parsed[-1].clusters[uid].offsets.append(offset)
                     else:
                         parsed[-1].clusters[uid] = PubtatorCluster(
-                            mentions=[mention], offsets=[(adj_start, adj_end)], label=label
+                            mentions=[mention], offsets=[offset], label=label
                         )
             # This is a relation
             else:
