@@ -1,5 +1,5 @@
 from operator import itemgetter
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 
 
 def pubtator_ann_is_mention(pubtator_ann: Union[str, List[str]]) -> bool:
@@ -33,7 +33,9 @@ def sort_entity_annotations(annotations: List[str], **kwargs: Any) -> List[str]:
     return sorted_ents + rels
 
 
-def sort_by_offset(items: List[Any], offsets: List[int], **kwargs: Any) -> List[str]:
+def sort_by_offset(
+    items: List[Any], offsets: List[int], **kwargs: Any
+) -> Tuple[List[Any], List[int]]:
     """Returns `items`, sorted in ascending order according to `offsets`. Raises a `ValueError`
     if `len(items) != len(offsets)`. If `items` is empty, this is a no-op. Optional `**kwargs` are
     passed to `sorted`.
@@ -41,9 +43,10 @@ def sort_by_offset(items: List[Any], offsets: List[int], **kwargs: Any) -> List[
     if len(items) != len(offsets):
         raise ValueError(f"len(items) ({len(items)}) != len(offsets) ({len(offsets)})")
     if not items:
-        return items
+        return items, offsets
     packed = list(zip(items, offsets))
-    packed = sorted(packed, key=itemgetter(1), **kwargs)
-    sorted_items, _ = list(zip(*packed))
-    sorted_items = list(sorted_items)
-    return sorted_items
+    key = kwargs.pop("key", itemgetter(1))
+    packed = sorted(packed, key=key, **kwargs)
+    sorted_items, sorted_offsets = list(zip(*packed))
+    sorted_items, sorted_offsets = list(sorted_items), list(sorted_offsets)
+    return sorted_items, sorted_offsets

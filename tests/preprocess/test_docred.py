@@ -46,6 +46,9 @@ class TestDocRED(Seq2RelDSTestCase):
                 " dolphin venture near the Arctic .\t"
             ),
         ]
+        # The second example here contains the special case where a relation has the same entities,
+        # but a different relation type. This tests that we sort that accordingly, i.e. first
+        # lexicographically and then by order of first appearance.
         self.valid = [
             (
                 "David Thomas McLaughlin ( March 16 , 1932 – August 25 , 2004 ) was the 14th"
@@ -58,9 +61,9 @@ class TestDocRED(Seq2RelDSTestCase):
                 " Corporation from 1979 , becoming chairman of the board in January 1999 until the"
                 " CBS merger . He also served as a director of Infininity Broadcasting Corporation"
                 " until the Infinity merger ."
-                "\tdavid thomas mclaughlin; mclaughlin @PER@ march 16 , 1932 @TIME@ @DATE_OF_BIRTH@"
-                " david thomas mclaughlin; mclaughlin @PER@ august 25 , 2004 @TIME@ @DATE_OF_DEATH@"
-                " david thomas mclaughlin; mclaughlin @PER@ cbs corporation; cbs @ORG@ @EMPLOYER@"
+                "\tdavid thomas mclaughlin ; mclaughlin @PER@ march 16 , 1932 @TIME@ @DATE_OF_BIRTH@"
+                " david thomas mclaughlin ; mclaughlin @PER@ august 25 , 2004 @TIME@ @DATE_OF_DEATH@"
+                " david thomas mclaughlin ; mclaughlin @PER@ cbs corporation ; cbs @ORG@ @EMPLOYER@"
             ),
             (
                 "Chachalacas are galliform birds from the genus Ortalis . These birds are found in"
@@ -81,9 +84,9 @@ class TestDocRED(Seq2RelDSTestCase):
                 " like birds – which very cautiously favors a north - to - south expansion of the"
                 " family .\t"
                 "chachalacas @MISC@ ortalis @MISC@ @PARENT_TAXON@"
-                " united states @LOC@ texas @LOC@ @CONTAINS_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
-                " texas @LOC@ united states @LOC@ @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
                 " texas @LOC@ united states @LOC@ @COUNTRY@"
+                " texas @LOC@ united states @LOC@ @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
+                " united states @LOC@ texas @LOC@ @CONTAINS_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
             ),
         ]
         self.test = [
@@ -98,10 +101,10 @@ class TestDocRED(Seq2RelDSTestCase):
                 " ordered for the RAN , were not cancelled and were subsequently completed in"
                 " Australia . Seven Battles were commissioned before the end of World War II , but"
                 " only saw action , with the British Pacific Fleet .\t"
-                "british royal navy; rn @ORG@ british @LOC@ @COUNTRY@"
-                " british royal navy; rn @ORG@ english @LOC@ @COUNTRY@"
-                " royal australian navy; ran @ORG@ australia @LOC@ @COUNTRY@"
-                " royal australian navy; ran @ORG@ world war ii @MISC@ @CONFLICT@"
+                "british royal navy ; rn @ORG@ british @LOC@ @COUNTRY@"
+                " british royal navy ; rn @ORG@ english @LOC@ @COUNTRY@"
+                " royal australian navy ; ran @ORG@ australia @LOC@ @COUNTRY@"
+                " royal australian navy ; ran @ORG@ world war ii @MISC@ @CONFLICT@"
                 " british pacific fleet @ORG@ british @LOC@ @COUNTRY@"
                 " british pacific fleet @ORG@ english @LOC@ @COUNTRY@"
                 " british pacific fleet @ORG@ world war ii @MISC@ @CONFLICT@"

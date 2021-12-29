@@ -38,8 +38,8 @@ class TestGDA(Seq2RelDSTestCase):
                 " secretion of LH in the younger sister. The same mutations of the GnRH receptor gene"
                 " may thus determine different degrees of alteration of gonadotropin function in"
                 " affected kindred of the same family."
-                "\tgonadotropin-releasing hormone receptor; gnrh receptor @GENE@ complete"
-                " idiopathic hypogonadotropic hypogonadism; idiopathic hypogonadotropic hypogonadism"
+                "\tgonadotropin-releasing hormone receptor ; gnrh receptor @GENE@ complete"
+                " idiopathic hypogonadotropic hypogonadism ; idiopathic hypogonadotropic hypogonadism"
                 " @DISEASE@ @GDA@"
             ),
             (
@@ -72,7 +72,7 @@ class TestGDA(Seq2RelDSTestCase):
                 " The 186 base pair allele was also significantly associated with PD (OR = 1.85;"
                 " p = 0.048; 95% CI = 1.01-3.42). The GT repeat in intron 2 of the MAOB gene is a"
                 " powerful marker for PD in this large Australian cohort."
-                "\tmonoamine oxidase b; maob @GENE@ parkinson's disease; pd @DISEASE@ @GDA@"
+                "\tmonoamine oxidase b ; maob @GENE@ parkinson's disease ; pd @DISEASE@ @GDA@"
             )
         ]
 

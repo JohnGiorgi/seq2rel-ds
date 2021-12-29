@@ -43,7 +43,7 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 " 37-year-old man who developed persistent segmental dystonia within 2 months"
                 " after starting sulpiride therapy. We could not find any previous reports of"
                 " sulpiride-induced tardive dystonia."
-                "\tsulpiride @CHEMICAL@ tardive dystonia; dystonia @DISEASE@ @CID@"
+                "\tsulpiride @CHEMICAL@ tardive dystonia ; dystonia @DISEASE@ @CID@"
             ),
         ]
         self.valid = [
