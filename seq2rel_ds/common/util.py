@@ -50,7 +50,7 @@ s.mount("https://", HTTPAdapter(max_retries=retries))
 # Private functions #
 
 
-def _first_mention(string: str, text: str, **kwargs: Any) -> Optional[re.Match]:
+def _find_first_mention(string: str, text: str, **kwargs: Any) -> Optional[re.Match]:
     """Search for the first occurrence of `string` in `text`, returning an `re.Match` object if
     found and `None` otherwise. To match `string` to `text` more accurately, we use a type of
     "backoff" strategy. First, we look for the whole entity in text. If we cannot find it, we look
@@ -203,7 +203,7 @@ def parse_pubtator(
 
                     # If this is a compound entity update the offsets to be as correct as possible.
                     if len(mentions) > 1:
-                        match = _first_mention(mention, text, pos=start, endpos=end)
+                        match = _find_first_mention(mention, text, pos=start, endpos=end)
                         if match is not None:
                             offset = match.span()
 

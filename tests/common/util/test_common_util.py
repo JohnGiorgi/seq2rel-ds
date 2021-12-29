@@ -5,28 +5,28 @@ import pytest
 from seq2rel_ds.common import schemas, util
 
 
-def test_first_mention() -> None:
+def test_find_first_mention() -> None:
     # string not in the text
     string = "Waldo"
     text = "He's not here!"
-    match = util._first_mention(string, text)
+    match = util._find_first_mention(string, text)
     assert match is None
     # A false flag, Waldo appeares within another word before it appears on its own
     ent = "Waldo"
     text = "Waldorf is not Waldo"
-    match = util._first_mention(ent, text)
+    match = util._find_first_mention(ent, text)
     assert match.span() == (15, 20)
     # Check that we can match a compound entity lazily
     ent = "Waldo and Wally"
     text = "Waldo said to Wally, and Wally said to Waldo"
-    match = util._first_mention(ent, text)
+    match = util._find_first_mention(ent, text)
     assert match.span() == (0, 19)
     # Check that we can provide kwargs to Pattern.search
     ent = "Wally"
     text = "Waldo said to Wally, and Wally said to Waldo"
-    match = util._first_mention(ent, text, pos=0)
+    match = util._find_first_mention(ent, text, pos=0)
     assert match.span() == (14, 19)
-    match = util._first_mention(ent, text, pos=19)
+    match = util._find_first_mention(ent, text, pos=19)
     assert match.span() == (25, 30)
 
 
