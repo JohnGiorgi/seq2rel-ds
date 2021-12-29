@@ -44,8 +44,9 @@ class PubtatorCluster(BaseModel):
         return entity_string
 
     def get_offset(self) -> int:
-        """Returns the end character offset first occurring mention of this entity."""
-        return min(self.offsets, key=itemgetter(1))[1]
+        """Returns the sum of the start and end character offsets of the first occurring mention of
+        this entity."""
+        return sum(min(self.offsets, key=itemgetter(1)))
 
 
 class PubtatorAnnotation(BaseModel):
