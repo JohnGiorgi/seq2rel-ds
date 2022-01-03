@@ -39,7 +39,7 @@ def test_pubtator_cluster_to_string() -> None:
     assert COREF_SEP_SYMBOL in actual
 
 
-def test_pubtator_cluster_get_offset() -> None:
+def test_pubtator_cluster_get_offsets() -> None:
     ent = schemas.PubtatorCluster(
         # We don't need actual mentions or a label to test this method.
         mentions=[
@@ -51,8 +51,8 @@ def test_pubtator_cluster_get_offset() -> None:
         offsets=[(200, 221), (100, 121), (20, 41), (0, 21)],
         label="",
     )
-    expected = 21
-    actual = ent.get_offset()
+    expected = (0, 21)
+    actual = ent.get_offsets()
     assert actual == expected
 
 
