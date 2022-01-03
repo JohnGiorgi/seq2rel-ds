@@ -84,9 +84,9 @@ class TestDocRED(Seq2RelDSTestCase):
                 " like birds – which very cautiously favors a north - to - south expansion of the"
                 " family .\t"
                 "chachalacas @MISC@ ortalis @MISC@ @PARENT_TAXON@"
-                " texas @LOC@ united states @LOC@ @COUNTRY@"
-                " texas @LOC@ united states @LOC@ @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
                 " united states @LOC@ texas @LOC@ @CONTAINS_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
+                " texas @LOC@ united states @LOC@ @LOCATED_IN_THE_ADMINISTRATIVE_TERRITORIAL_ENTITY@"
+                " texas @LOC@ united states @LOC@ @COUNTRY@"
             ),
         ]
         self.test = [
