@@ -3,7 +3,7 @@ import json
 import random
 from typing import Dict, List, Tuple
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 from seq2rel_ds.common import sorting_utils, special_tokens
 from seq2rel_ds.common.text_utils import sanitize_text
 
@@ -82,16 +82,15 @@ class PubtatorAnnotation(BaseModel):
         their order of first appearance.
         """
         relation_strings = []
-        entity_offsets = []
+        relation_offsets = []
         for rel in self.relations:
-            entity_strings, entity_offset = [], []
-            for ent_id in rel[:-1]:
-                ent = self.clusters[ent_id]
-                entity_strings.append(ent.to_string())
-                entity_offset.append(sum(ent.get_offsets()))
+            # Everything but the last item in a relation tuple is an entity, hence [:-1]
+            entity_strings = [self.clusters[ent_id].to_string() for ent_id in rel[:-1]]
             relation_string = sanitize_text(f'{" ".join(entity_strings)} @{rel[-1].upper()}@')
+            entity_offsets = [sum(self.clusters[ent_id].get_offsets()) for ent_id in rel[:-1]]
             relation_strings.append(relation_string)
-            entity_offsets.append(entity_offset)
+            relation_offsets.append(entity_offsets)
+
         # Optionally, sort by order of first appearance.
         # This exists mainly for ablation, so we randomly shuffle relations if sort=False.
         if relation_strings:
@@ -101,12 +100,12 @@ class PubtatorAnnotation(BaseModel):
                 # according to the head entities, then the tail entities (and so-on for n-ary).
                 # Functionally, this is equivalent to first sorting by the sum of entity offsets,
                 # and then the n - 1 entity offsets.
-                relation_strings, entity_offsets = sorting_utils.sort_by_offset(
-                    relation_strings, entity_offsets, key=lambda x: sum(x[1])
+                relation_strings, relation_offsets = sorting_utils.sort_by_offset(
+                    relation_strings, relation_offsets, key=lambda x: sum(x[1])
                 )
-                for i in range(len(entity_offsets[0]) - 1):
-                    relation_strings, entity_offsets = sorting_utils.sort_by_offset(
-                        relation_strings, entity_offsets, key=lambda x: x[1][i]
+                for i in range(len(relation_offsets[0]) - 1):
+                    relation_strings, relation_offsets = sorting_utils.sort_by_offset(
+                        relation_strings, relation_offsets, key=lambda x: x[1][i]
                     )
             else:
                 random.shuffle(relation_strings)
