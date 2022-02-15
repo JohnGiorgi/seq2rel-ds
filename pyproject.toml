@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -31,7 +32,7 @@ classifiers = [
 exclude = ["tests", "test_fixtures"]
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
+python = "^3.8.0"
 typer = {extras = ["all"], version = "^0.4.0"}
 more-itertools = "^8.10.0"
 pandas = "^1.2.1"
@@ -75,5 +76,5 @@ exclude = '''
 '''
 
 [build-system]
-requires = ["poetry-core>=1.1.11"]
+requires = ["poetry-core>=1.1.13"]
 build-backend = "poetry.core.masonry.api"
