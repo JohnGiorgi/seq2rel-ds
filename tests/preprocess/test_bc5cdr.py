@@ -3,6 +3,7 @@ from pathlib import Path
 from seq2rel_ds.common.testing import Seq2RelDSTestCase
 from seq2rel_ds.preprocess import bc5cdr
 from typer.testing import CliRunner
+from seq2rel_ds.common import schemas
 
 runner = CliRunner()
 
@@ -78,6 +79,46 @@ class TestBC5CDR(Seq2RelDSTestCase):
                 "\tfamotidine @CHEMICAL@ delirium @DISEASE@ @CID@"
             )
         ]
+
+    def test_filter_hypernyms(self):
+        annotation = schemas.PubtatorAnnotation(
+            text=(
+                "Carbamazepine-induced cardiac dysfunction. A patient with sinus bradycardia and"
+                " atrioventricular block, induced by carbamazepine, prompted an extensive"
+                " literature review of all previously reported cases."
+            ),
+            pmid="",
+            clusters={
+                "D002220": schemas.PubtatorCluster(
+                    mentions=["Carbamazepine", "carbamazepine"],
+                    offsets=[(0, 13), (115, 128)],
+                    label="Chemical",
+                ),
+                "D006331": schemas.PubtatorCluster(
+                    mentions=["cardiac dysfunction"],
+                    offsets=[(22, 41)],
+                    label="Disease",
+                ),
+                "D001919": schemas.PubtatorCluster(
+                    mentions=["bradycardia"],
+                    offsets=[(64, 75)],
+                    label="Disease",
+                ),
+                "D054537": schemas.PubtatorCluster(
+                    mentions=["atrioventricular block"],
+                    offsets=[(80, 102)],
+                    label="Disease",
+                ),
+            },
+            relations=[("D002220", "D001919", "CID"), ("D002220", "D054537", "CID")],
+        )
+
+        bc5cdr._filter_hypernyms([annotation])
+        actual = annotation.filtered_relations
+        # D006331 is a hypernym of D001919 and/or D054537 and so it should be filtered.
+        expected = [("D002220", "D006331", "CID")]
+
+        assert actual == expected
 
     def test_preprocess(self) -> None:
         # training data

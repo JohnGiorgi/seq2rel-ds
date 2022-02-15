@@ -1,7 +1,7 @@
 import copy
 import json
 import random
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 from seq2rel_ds.common import sorting_utils, special_tokens
@@ -56,6 +56,7 @@ class PubtatorAnnotation(BaseModel):
     pmid: str
     clusters: Dict[str, PubtatorCluster] = {}
     relations: List[Tuple[str, ...]] = []
+    filtered_relations: Optional[List[Tuple[str, ...]]] = None
 
     def insert_hints(self, sort: bool = True) -> None:
         """Inserts entity hints into the beginning of `self.text`. This effectively turns the
@@ -91,6 +92,18 @@ class PubtatorAnnotation(BaseModel):
             relation_strings.append(relation_string)
             relation_offsets.append(entity_offsets)
 
+        if self.filtered_relations is not None:
+            if self.filtered_relations:
+                filtered_relation_strings = []
+                for rel in self.filtered_relations:
+                    entity_strings = [self.clusters[ent_id].to_string() for ent_id in rel[:-1]]
+                    relation_string = sanitize_text(
+                        f'{" ".join(entity_strings)} @{rel[-1].upper()}@'
+                    )
+                    filtered_relation_strings.append(relation_string)
+            else:
+                filtered_relation_strings = ["null"]
+
         # Optionally, sort by order of first appearance.
         # This exists mainly for ablation, so we randomly shuffle relations if sort=False.
         if relation_strings:
@@ -113,6 +126,9 @@ class PubtatorAnnotation(BaseModel):
             relation_strings = list(dict.fromkeys(relation_strings))
         # Create the linearized relation string
         relation_string = " ".join(relation_strings).strip()
+        # Possibly add the relations to filter to this string.
+        if self.filtered_relations is not None:
+            relation_string = f'{relation_string}\t{" ".join(filtered_relation_strings).strip()}'
         return relation_string
 
 
