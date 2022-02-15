@@ -23,7 +23,7 @@ VALID_FILENAME = "CDR_DevelopmentSet.PubTator.txt"
 TEST_FILENAME = "CDR_TestSet.PubTator.txt"
 
 
-@lru_cache
+@lru_cache()
 def _download_mesh_tree() -> Dict[str, List[str]]:
     """Downloads the MeSH tree and returns a dictionary mapping MeSH unique IDs to tree numbers."""
     parsed_mesh_tree = defaultdict(list)
