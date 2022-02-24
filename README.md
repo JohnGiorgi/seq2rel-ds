@@ -12,22 +12,14 @@ This is a sister repository to [`seq2rel`](https://github.com/JohnGiorgi/seq2rel
 This repository requires Python 3.8 or later. The preferred way to install is via pip:
 
 ```
-pip install seq2rel-ds
+pip install git+https://github.com/JohnGiorgi/seq2rel-ds.git
 ```
 
 If you need pointers on setting up an appropriate Python environment, please see the [AllenNLP install instructions](https://github.com/allenai/allennlp#installing-via-pip).
 
 ### Installing from source
 
-You can also install from source. 
-
-Using `pip`:
-
-```
-pip install git+https://github.com/JohnGiorgi/seq2rel-ds
-```
-
-Using [Poetry](https://python-poetry.org/):
+You can also install from source using [Poetry](https://python-poetry.org/):
 
 ```bash
 # Install poetry for your system: https://python-poetry.org/docs/#installation
