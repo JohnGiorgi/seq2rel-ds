@@ -9,7 +9,7 @@ This is a sister repository to [`seq2rel`](https://github.com/JohnGiorgi/seq2rel
 
 ## Installation
 
-This repository requires Python 3.8 or later. The preferred way to install is via pip:
+This repository requires Python 3.7.1 or later. The preferred way to install is via pip:
 
 ```bash
 pip install git+https://github.com/JohnGiorgi/seq2rel-ds.git
