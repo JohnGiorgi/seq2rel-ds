@@ -125,8 +125,12 @@ def main(
     elif entity_hinting == EntityHinting.gold:
         msg.info("Entity hints will be inserted into the source text using the gold annotations.")
 
-    # Load in the raw distant supervision data.
-    distsup_raw = [line for line in jsonutils.JSONLIterator(open(train_fp))]
+    # Load in the raw distant supervision data. We follow https://arxiv.org/abs/1904.02347 by
+    # removing examples that don't contain triple candidates.
+    distsup_raw = [
+        line for line in jsonutils.JSONLIterator(open(train_fp)) if line["triple_candidates"]
+    ]
+
     # Split it into train/validation sets.
     distsup_train_pmids = (
         (data_fp / "distsup_pmid_split" / "train.txt").read_text().strip().splitlines()
