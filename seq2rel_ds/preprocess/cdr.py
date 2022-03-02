@@ -8,9 +8,7 @@ import requests
 import typer
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
-from seq2rel_ds.common.util import PUBTATOR_API_URL
 from seq2rel_ds.common.schemas import PubtatorAnnotation
-from seq2rel_ds.common.sorting_utils import pubtator_ann_is_mention
 from seq2rel_ds.common.util import EntityHinting
 
 app = typer.Typer()
@@ -123,53 +121,6 @@ def _preprocess(
     )
 
     return seq2rel_annotations
-
-
-def _to_silver(pubtator_content: str) -> str:
-    pubtator_annotations = util.parse_pubtator(
-        pubtator_content=pubtator_content,
-        text_segment=util.TextSegment.both,
-    )
-    pmids = [ann.pmid for ann in pubtator_annotations]
-    r = requests.post(PUBTATOR_API_URL, json={"pmids": pmids, "concepts": ["chemical", "disease"]})
-    r = r.text.replace("\tMESH:", "\t")
-    gold_annotations = pubtator_content.strip().split("\n\n")
-    silver_annotations = r.strip().split("\n\n")
-    combined = []
-    for gold in gold_annotations:
-        pmid = gold.split("|t|")[0]
-        silver = [silver for silver in silver_annotations if silver.startswith(pmid)][0]
-        lines = gold.strip().split("\n")
-        relations = "\n".join([line for line in lines[2:] if not pubtator_ann_is_mention(line)])
-        combined.append(f"{silver.strip()}\n{relations.strip()}")
-    return "\n\n".join(combined).strip()
-
-
-@app.command()
-def to_silver(
-    output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data.")
-):
-    """Saves a copy of the CDR corpus to disk with silver-standard entity annotations provided
-    by PubTator.
-    """
-    msg.divider("Preprocessing CDR")
-    with msg.loading("Downloading corpus..."):
-        train_raw, valid_raw, test_raw = _download_corpus()
-    msg.good("Downloaded the corpus.")
-
-    with msg.loading("Preprocessing the data..."):
-        train_silver = _to_silver(train_raw)
-        valid_silver = _to_silver(valid_raw)
-        test_silver = _to_silver(test_raw)
-    msg.good("Preprocessed the data.")
-
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    (output_dir / "CDR_TrainingSet.PubTator.txt").write_text(train_silver)
-    (output_dir / "CDR_DevelopmentSet.PubTator.txt").write_text(valid_silver)
-    (output_dir / "CDR_TestSet.PubTator.txt").write_text(test_silver)
-    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 @app.command()
