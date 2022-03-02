@@ -188,7 +188,7 @@ def parse_pubtator(
                 if section != text_segment.value and text_segment.value != "both":
                     continue
 
-                # In at least one corpus (BC5CDR), the annotators include annotations for the
+                # In at least one corpus (CDR), the annotators include annotations for the
                 # individual entities in a compound entity. So we deal with that here.
                 # Note that the start & end indicies will no longer be exactly correct, but are
                 # be close enough for our purposes of sorting entities by order of appearence.

@@ -69,7 +69,7 @@ def test_train_valid_test_split_value_error():
 
 
 def test_parse_pubtator() -> None:
-    # A truncated example taken from the BC5CDR dataset
+    # A truncated example taken from the CDR dataset
     pmid = "18020536"
     title_text = (
         "Associations between use of benzodiazepines or related drugs and health, physical"
@@ -163,7 +163,7 @@ def test_parse_pubtator() -> None:
 
 
 def test_parse_pubtator_skip_malformed_raises_value_error() -> None:
-    # A truncated example taken from the BC5CDR dataset
+    # A truncated example taken from the CDR dataset
     pmid = "2339463"
     title_text = "Cerebral sinus thrombosis as a potential hazard of antifibrinolytic treatment in menorrhagia."
     abstract_text = (
@@ -184,7 +184,7 @@ def test_parse_pubtator_skip_malformed_raises_value_error() -> None:
 
 
 def test_parse_pubtator_no_abstract_raises_value_error() -> None:
-    # A truncated example taken from the BC5CDR dataset
+    # A truncated example taken from the CDR dataset
     pmid = "2339463"
     title_text = "Cerebral sinus thrombosis as a potential hazard of antifibrinolytic treatment in menorrhagia."
     abstract_text = ""
@@ -202,7 +202,7 @@ def test_parse_pubtator_no_abstract_raises_value_error() -> None:
 
 
 def test_parse_pubtator_compound_ent() -> None:
-    # A truncated example taken from the BC5CDR dataset
+    # A truncated example taken from the CDR dataset
     pmid = "17854040"
     title_text = (
         "Mutations associated with lamivudine-resistance in therapy-na  ve hepatitis B virus (HBV)"
