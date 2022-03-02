@@ -1,20 +1,20 @@
 from pathlib import Path
 
 from seq2rel_ds.common.testing import Seq2RelDSTestCase
-from seq2rel_ds.preprocess import bc5cdr
+from seq2rel_ds.preprocess import cdr
 from typer.testing import CliRunner
 from seq2rel_ds.common import schemas
 
 runner = CliRunner()
 
 
-class TestBC5CDR(Seq2RelDSTestCase):
+class TestCDR(Seq2RelDSTestCase):
     def setup_method(self) -> None:
         super().setup_method()
-        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "bc5cdr"
-        self.train_path = self.data_dir / bc5cdr.TRAIN_FILENAME
-        self.valid_path = self.data_dir / bc5cdr.VALID_FILENAME
-        self.test_path = self.data_dir / bc5cdr.TEST_FILENAME
+        self.data_dir = self.FIXTURES_ROOT / "preprocess" / "cdr"
+        self.train_path = self.data_dir / cdr.TRAIN_FILENAME
+        self.valid_path = self.data_dir / cdr.VALID_FILENAME
+        self.test_path = self.data_dir / cdr.TEST_FILENAME
 
         # The expected data, after preprocessing, for each partition
         self.train = [
@@ -113,7 +113,7 @@ class TestBC5CDR(Seq2RelDSTestCase):
             relations=[("D002220", "D001919", "CID"), ("D002220", "D054537", "CID")],
         )
 
-        bc5cdr._filter_hypernyms([annotation])
+        cdr._filter_hypernyms([annotation])
         actual = annotation.filtered_relations
         # D006331 is a hypernym of D001919 and/or D054537 and so it should be filtered.
         expected = [("D002220", "D006331", "CID")]
@@ -122,20 +122,20 @@ class TestBC5CDR(Seq2RelDSTestCase):
 
     def test_preprocess(self) -> None:
         # training data
-        actual = bc5cdr._preprocess(self.train_path.read_text())
+        actual = cdr._preprocess(self.train_path.read_text())
         assert actual == self.train
 
         # validation data
-        actual = bc5cdr._preprocess(self.valid_path.read_text())
+        actual = cdr._preprocess(self.valid_path.read_text())
         assert actual == self.valid
 
         # test data
-        actual = bc5cdr._preprocess(self.test_path.read_text())
+        actual = cdr._preprocess(self.test_path.read_text())
         assert actual == self.test
 
-    def test_bc5cdr_command(self, tmp_path: Path) -> None:
+    def test_cdr_command(self, tmp_path: Path) -> None:
         output_dir = str(tmp_path)
-        result = runner.invoke(bc5cdr.app, [output_dir])
+        result = runner.invoke(cdr.app, [output_dir])
         assert result.exit_code == 0
 
         # Check that the expected files were created
@@ -143,9 +143,9 @@ class TestBC5CDR(Seq2RelDSTestCase):
         assert (tmp_path / "valid.tsv").is_file()
         assert (tmp_path / "test.tsv").is_file()
 
-    def test_bc5cdr_command_pipline_entity_hinting(self, tmp_path: Path) -> None:
+    def test_cdr_command_pipline_entity_hinting(self, tmp_path: Path) -> None:
         output_dir = str(tmp_path)
-        result = runner.invoke(bc5cdr.app, [output_dir, "--entity-hinting", "pipeline"])
+        result = runner.invoke(cdr.app, [output_dir, "--entity-hinting", "pipeline"])
         assert result.exit_code == 0
 
         # Check that the expected files were created
@@ -153,9 +153,9 @@ class TestBC5CDR(Seq2RelDSTestCase):
         assert (tmp_path / "valid.tsv").is_file()
         assert (tmp_path / "test.tsv").is_file()
 
-    def test_bc5cdr_command_gold_entity_hinting(self, tmp_path: Path) -> None:
+    def test_cdr_command_gold_entity_hinting(self, tmp_path: Path) -> None:
         output_dir = str(tmp_path)
-        result = runner.invoke(bc5cdr.app, [output_dir, "--entity-hinting", "gold"])
+        result = runner.invoke(cdr.app, [output_dir, "--entity-hinting", "gold"])
         assert result.exit_code == 0
 
         # Check that the expected files were created

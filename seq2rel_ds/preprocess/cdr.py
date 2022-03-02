@@ -8,12 +8,14 @@ import requests
 import typer
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
+from seq2rel_ds.common.util import PUBTATOR_API_URL
 from seq2rel_ds.common.schemas import PubtatorAnnotation
+from seq2rel_ds.common.sorting_utils import pubtator_ann_is_mention
 from seq2rel_ds.common.util import EntityHinting
 
 app = typer.Typer()
 
-BC5CDR_URL = "https://biocreative.bioinformatics.udel.edu/media/store/files/2016/CDR_Data.zip"
+CDR_URL = "https://biocreative.bioinformatics.udel.edu/media/store/files/2016/CDR_Data.zip"
 MESH_TREE_URL = (
     "https://github.com/fenchri/edge-oriented-graph/raw/master/data_processing/2017MeshTree.txt"
 )
@@ -35,7 +37,7 @@ def _download_mesh_tree() -> Dict[str, List[str]]:
 
 
 def _download_corpus() -> Tuple[str, str, str]:
-    z = util.download_zip(BC5CDR_URL)
+    z = util.download_zip(CDR_URL)
     train = z.read(str(Path(PARENT_DIR) / TRAIN_FILENAME)).decode()
     valid = z.read(str(Path(PARENT_DIR) / VALID_FILENAME)).decode()
     test = z.read(str(Path(PARENT_DIR) / TEST_FILENAME)).decode()
@@ -105,11 +107,11 @@ def _preprocess(
         text_segment=util.TextSegment.both,
     )
 
-    # This is unique the the BC5CDR corpus, which contains many negative relations that are
+    # This is unique the the CDR corpus, which contains many negative relations that are
     # actually valid, but are not annotated because they contain a disease entity which is the
     # hypernym of a disease entity in a positive relation. We need to filter these out before
     # evaluation, so this function finds all such cases and adds them to the filtered_relations
-    # field of the annoations.
+    # field of the annoations. See: https://arxiv.org/abs/1909.00228 for details.
     if filter_hypernyms:
         _filter_hypernyms(pubtator_annotations)
 
@@ -121,6 +123,53 @@ def _preprocess(
     )
 
     return seq2rel_annotations
+
+
+def _to_silver(pubtator_content: str) -> str:
+    pubtator_annotations = util.parse_pubtator(
+        pubtator_content=pubtator_content,
+        text_segment=util.TextSegment.both,
+    )
+    pmids = [ann.pmid for ann in pubtator_annotations]
+    r = requests.post(PUBTATOR_API_URL, json={"pmids": pmids, "concepts": ["chemical", "disease"]})
+    r = r.text.replace("\tMESH:", "\t")
+    gold_annotations = pubtator_content.strip().split("\n\n")
+    silver_annotations = r.strip().split("\n\n")
+    combined = []
+    for gold in gold_annotations:
+        pmid = gold.split("|t|")[0]
+        silver = [silver for silver in silver_annotations if silver.startswith(pmid)][0]
+        lines = gold.strip().split("\n")
+        relations = "\n".join([line for line in lines[2:] if not pubtator_ann_is_mention(line)])
+        combined.append(f"{silver.strip()}\n{relations.strip()}")
+    return "\n\n".join(combined).strip()
+
+
+@app.command()
+def to_silver(
+    output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data.")
+):
+    """Saves a copy of the CDR corpus to disk with silver-standard entity annotations provided
+    by PubTator.
+    """
+    msg.divider("Preprocessing CDR")
+    with msg.loading("Downloading corpus..."):
+        train_raw, valid_raw, test_raw = _download_corpus()
+    msg.good("Downloaded the corpus.")
+
+    with msg.loading("Preprocessing the data..."):
+        train_silver = _to_silver(train_raw)
+        valid_silver = _to_silver(valid_raw)
+        test_silver = _to_silver(test_raw)
+    msg.good("Preprocessed the data.")
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    (output_dir / "CDR_TrainingSet.PubTator.txt").write_text(train_silver)
+    (output_dir / "CDR_DevelopmentSet.PubTator.txt").write_text(valid_silver)
+    (output_dir / "CDR_TestSet.PubTator.txt").write_text(test_silver)
+    msg.good(f"Preprocessed data saved to {output_dir.resolve()}.")
 
 
 @app.command()
@@ -141,8 +190,8 @@ def main(
         False, help="Combine the train and validation sets into one train set."
     ),
 ) -> None:
-    """Download and preprocess the BC5CDR corpus for use with seq2rel."""
-    msg.divider("Preprocessing BC5CDR")
+    """Download and preprocess the CDR corpus for use with seq2rel."""
+    msg.divider("Preprocessing CDR")
 
     with msg.loading("Downloading corpus..."):
         train_raw, valid_raw, test_raw = _download_corpus()
