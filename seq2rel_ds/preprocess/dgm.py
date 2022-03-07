@@ -98,7 +98,7 @@ def main(
         case_sensitive=False,
     ),
     valid_size: float = typer.Option(
-        0.1,
+        0.2,
         help=(
             "Fraction of training examples to hold out as a validation set. The original validation"
             " set is used as the test set, as the test set does not contain paragraph-level annotations",
