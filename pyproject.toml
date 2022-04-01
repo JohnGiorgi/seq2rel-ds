@@ -12,8 +12,9 @@ keywords = [
     "seq2rel",
     "seq2seq",
     "information extraction",
-    "distant supervision",
-    "weak supervision"
+    "relation extraction",
+    "entity extraction",
+    "coreference resolution",
 ]
 classifiers = [
     "Development Status :: 1 - Planning",
@@ -34,7 +35,6 @@ exclude = ["tests", "test_fixtures"]
 python = "^3.7.1"
 typer = {extras = ["all"], version = "^0.4.0"}
 more-itertools = "^8.10.0"
-pandas = "^1.2.1"
 wasabi = "^0.8.2"
 pydantic = "^1.7.1"
 scikit-learn = "^0.24.1"
