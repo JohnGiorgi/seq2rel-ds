@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from seq2rel_ds.common.testing import Seq2RelDSTestCase
-from seq2rel_ds.preprocess import cdr
+from seq2rel_ds import cdr
 from typer.testing import CliRunner
 from seq2rel_ds.common import schemas
 
