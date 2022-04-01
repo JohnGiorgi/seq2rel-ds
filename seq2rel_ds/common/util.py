@@ -56,13 +56,13 @@ def _find_first_mention(string: str, text: str, **kwargs: Any) -> Optional[re.Ma
     "backoff" strategy. First, we look for the whole entity in text. If we cannot find it, we look
     for a lazy match of its first and last tokens. `**kwargs` are passed to `Pattern.search`.
     """
-    match = re.compile(fr"\b{re.escape(string)}\b").search(text, **kwargs)
+    match = re.compile(rf"\b{re.escape(string)}\b").search(text, **kwargs)
 
     if not match:
         ent_split = string.split()
         if len(ent_split) > 1:
             first, last = re.escape(ent_split[0]), re.escape(ent_split[-1])
-            match = re.compile(fr"\b{first}.*?{last}\b").search(text, **kwargs)
+            match = re.compile(rf"\b{first}.*?{last}\b").search(text, **kwargs)
     return match
 
 
