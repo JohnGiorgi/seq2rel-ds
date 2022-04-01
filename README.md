@@ -39,46 +39,29 @@ poetry install
 
 ## Usage
 
-There are two submodules:
-
-1. `preprocess`: used to preprocess existing datasets in a format that can be used with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
-2. `align`: used to generate data for distantly supervised learning with [`seq2rel`](https://github.com/JohnGiorgi/seq2rel).
-
-### `preprocess`
-
-To see the list of datasets available for preprocessing, call
+Installing this package gives you access to simple `seq2rel-ds` command line tool. To see the list of available commands, run:
 
 ```bash
-seq2rel-ds preprocess --help
+seq2rel-ds --help
 ```
 
-To preprocess the data (and in some cases, download it), call one of the commands, e.g.
+> Note, you can also call the underlying python files directly, e.g. `python path/to/seq2rel_ds/main.py --help`.
+
+To preprocess a dataset (and in most cases, download it), call one of the commands, e.g.
 
 ```bash
-seq2rel-ds preprocess cdr "path/to/output/directory"
+seq2rel-ds preprocess cdr main "path/to/cdr"
 ```
 
-### `align`
+> Note, you have to include `main` because [`typer`](https://typer.tiangolo.com/) does not support default commands.
 
-To see the list of strategies available for creating training data via weak/distant supervision, call
+This will create the preprocessed `tsv` files under the specificed output directory, e.g.
 
-```bash
-seq2rel-ds align --help
+```
+cdr
+ ┣ test.tsv
+ ┣ train.tsv
+ ┗ valid.tsv
 ```
 
-#### BioGRID
-
-To use [BioGRID](https://thebiogrid.org/) and distant supervision to create training data, you first need to download a BioGRID release in the `.tab3` format from [here](https://downloads.thebiogrid.org/BioGRID). Then, to preprocess this data, call
-
-```bash
-seq2rel-ds align biogrid preprocess "path/to/output/directory" "path/to/biogrid/release.tab3"
-```
-
-with the data preprocessed, call the following to create the training data
-
-```bash
-seq2rel-ds align biogrid "path/to/output/directory" "aligned_examples.tsv"
-```
-
-`"aligned_examples.tsv"` can then be used to train a [`seq2rel`](https://github.com/JohnGiorgi/seq2rel) model.
-
+which can then be used to train a [`seq2rel`](https://github.com/JohnGiorgi/seq2rel) model.
