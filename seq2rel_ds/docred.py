@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 import typer
+
 from seq2rel_ds import msg
 from seq2rel_ds.common import text_utils, util
 

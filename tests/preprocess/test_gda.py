@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from seq2rel_ds.common.testing import Seq2RelDSTestCase
-from seq2rel_ds import gda
 from typer.testing import CliRunner
+
+from seq2rel_ds import gda
+from seq2rel_ds.common.testing import Seq2RelDSTestCase
 
 runner = CliRunner()
 

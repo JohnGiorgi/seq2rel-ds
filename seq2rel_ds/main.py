@@ -1,6 +1,7 @@
 import typer
-from seq2rel_ds.common.util import set_seeds
+
 from seq2rel_ds import cdr, dgm, docred, gda
+from seq2rel_ds.common.util import set_seeds
 
 set_seeds()
 

@@ -4,6 +4,7 @@ import random
 from typing import Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
+
 from seq2rel_ds.common import sorting_utils, special_tokens
 from seq2rel_ds.common.text_utils import sanitize_text
 

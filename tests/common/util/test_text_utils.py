@@ -2,6 +2,7 @@ import re
 
 from hypothesis import given
 from hypothesis.strategies import booleans, text
+
 from seq2rel_ds.common import text_utils
 
 

@@ -10,10 +10,11 @@ import numpy as np
 import requests
 from more_itertools import chunked
 from requests.adapters import HTTPAdapter
-from seq2rel_ds.common import sorting_utils
-from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 from sklearn.model_selection import train_test_split
 from urllib3.util.retry import Retry
+
+from seq2rel_ds.common import sorting_utils
+from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 
 # Seeds
 SEED = 13370

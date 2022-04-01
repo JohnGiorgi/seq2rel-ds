@@ -1,8 +1,9 @@
 import copy
 import json
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 import pytest
+
 from seq2rel_ds.common.schemas import PubtatorAnnotation
 
 

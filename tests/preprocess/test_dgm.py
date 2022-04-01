@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from seq2rel_ds.common.testing import Seq2RelDSTestCase
-from seq2rel_ds import dgm
 from typer.testing import CliRunner
+
+from seq2rel_ds import dgm
+from seq2rel_ds.common.testing import Seq2RelDSTestCase
 
 runner = CliRunner()
 
