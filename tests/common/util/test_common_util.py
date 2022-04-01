@@ -40,7 +40,9 @@ def test_set_seeds() -> None:
 
 def test_download_zip() -> None:
     # Download some dummy data and make sure we can read it.
-    z = util.download_zip("https://file-examples-com.github.io/uploads/2017/02/zip_2MB.zip")
+    z = util.download_zip(
+        "https://file-examples.com/storage/fe7853d4906247198ae37c5/2017/02/zip_2MB.zip"
+    )
     assert len(z.namelist()) == 4
     _ = z.read("zip_10MB/file_example_ODS_5000.ods")
     _ = z.read("zip_10MB/file_example_PPT_1MB.ppt")
