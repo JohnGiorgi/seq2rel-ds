@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 
 import requests
 import typer
+
 from seq2rel_ds import msg
 from seq2rel_ds.common import util
 from seq2rel_ds.common.schemas import PubtatorAnnotation

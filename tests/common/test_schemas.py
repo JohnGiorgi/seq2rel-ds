@@ -2,6 +2,7 @@ import copy
 import json
 
 import pytest
+
 from seq2rel_ds.common import schemas
 from seq2rel_ds.common.special_tokens import COREF_SEP_SYMBOL, HINT_SEP_SYMBOL
 

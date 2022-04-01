@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import pytest
+
 from seq2rel_ds.common import sorting_utils
 
 

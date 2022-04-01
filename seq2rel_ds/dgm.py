@@ -3,10 +3,11 @@ from typing import Any, Dict, List, Optional
 
 import typer
 from boltons import jsonutils
+from sklearn.model_selection import train_test_split
+
 from seq2rel_ds import msg
 from seq2rel_ds.common import text_utils, util
 from seq2rel_ds.common.util import EntityHinting
-from sklearn.model_selection import train_test_split
 
 app = typer.Typer()
 

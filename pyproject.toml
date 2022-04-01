@@ -12,8 +12,9 @@ keywords = [
     "seq2rel",
     "seq2seq",
     "information extraction",
-    "distant supervision",
-    "weak supervision"
+    "relation extraction",
+    "entity extraction",
+    "coreference resolution",
 ]
 classifiers = [
     "Development Status :: 1 - Planning",
@@ -31,17 +32,16 @@ classifiers = [
 exclude = ["tests", "test_fixtures"]
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
-typer = {extras = ["all"], version = "^0.4.0"}
+python = "^3.8"
+typer = {extras = ["all"], version = "^0.4.1"}
 more-itertools = "^8.10.0"
-pandas = "^1.2.1"
 wasabi = "^0.8.2"
 pydantic = "^1.7.1"
 scikit-learn = "^0.24.1"
 boltons = "^21.0.0"
 
 [tool.poetry.dev-dependencies]
-black = "^21.11b1"
+black = "^22.3.0"
 codecov = "^2.1.11"
 coverage = "^5.5"
 flake8 = "^3.8.4"

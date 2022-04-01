@@ -1,6 +1,6 @@
-from pathlib import Path
 import json
 import random
+from pathlib import Path
 
 DRUG_LIST = "/Users/johngiorgi/Downloads/naacl2019/data/drug_lists/181109_ckb_all_drugs.txt"
 EXAMPLES = "/Users/johngiorgi/Downloads/naacl2019/data/examples/document/ds_train_dev.txt"

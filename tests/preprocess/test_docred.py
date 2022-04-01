@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
-from seq2rel_ds.common.testing import Seq2RelDSTestCase
-from seq2rel_ds.preprocess import docred
 from typer.testing import CliRunner
+
+from seq2rel_ds import docred
+from seq2rel_ds.common.testing import Seq2RelDSTestCase
 
 runner = CliRunner()
 
