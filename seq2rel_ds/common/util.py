@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from urllib3.util.retry import Retry
 
 from seq2rel_ds.common import sorting_utils
-from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
+from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorEntity
 
 # Seeds
 SEED = 13370
@@ -208,11 +208,11 @@ def parse_pubtator(
                         if match is not None:
                             offset = match.span()
 
-                    if uid in parsed[-1].clusters:
-                        parsed[-1].clusters[uid].mentions.append(mention)
-                        parsed[-1].clusters[uid].offsets.append(offset)
+                    if uid in parsed[-1].entities:
+                        parsed[-1].entities[uid].mentions.append(mention)
+                        parsed[-1].entities[uid].offsets.append(offset)
                     else:
-                        parsed[-1].clusters[uid] = PubtatorCluster(
+                        parsed[-1].entities[uid] = PubtatorEntity(
                             mentions=[mention], offsets=[offset], label=label
                         )
             # This is a relation
@@ -222,7 +222,7 @@ def parse_pubtator(
                 # Check that the relations entities are in the text
                 # and that this relation is unique.
                 if rel not in parsed[-1].relations and all(
-                    uid in parsed[-1].clusters for uid in uids
+                    uid in parsed[-1].entities for uid in uids
                 ):
                     parsed[-1].relations.append(rel)
 

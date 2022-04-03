@@ -15,7 +15,7 @@ def dummy_annotation_dict() -> Dict[str, Any]:
             "Mutations of yeast CYC8 or TUP1 genes greatly reduce the degree of glucose repression"
             " of many genes and affect other regulatory pathways, including mating type."
         ),
-        "clusters": {
+        "entities": {
             "852410": {"mentions": ["cyc8"], "offsets": [[142, 146]], "label": "Gene"},
             "850445": {"mentions": ["tup1"], "offsets": [[150, 154]], "label": "Gene"},
         },

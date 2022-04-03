@@ -16,7 +16,7 @@ class AlignedExample(BaseModel):
     score: float
 
 
-class PubtatorCluster(BaseModel):
+class PubtatorEntity(BaseModel):
     """A Pydantic model for storing entity annotations."""
 
     mentions: List[str]
@@ -55,7 +55,7 @@ class PubtatorAnnotation(BaseModel):
 
     text: str
     pmid: str
-    clusters: Dict[str, PubtatorCluster] = {}
+    entities: Dict[str, PubtatorEntity] = {}
     relations: List[Tuple[str, ...]] = []
     filtered_relations: Optional[List[Tuple[str, ...]]] = None
 
@@ -63,11 +63,11 @@ class PubtatorAnnotation(BaseModel):
         """Inserts entity hints into the beginning of `self.text`. This effectively turns the
         task into relation extraction (as opposed to joint entity and relation extraction).
         """
-        entity_strings = [ent.to_string() for ent in self.clusters.values()]
+        entity_strings = [ent.to_string() for ent in self.entities.values()]
         # Optionally, sort by order of first appearance using the end character offsets.
         # This exists mainly for ablation, so we randomly shuffle entities if sort=False.
         if sort:
-            entity_offsets = [ent.get_offsets() for ent in self.clusters.values()]
+            entity_offsets = [ent.get_offsets() for ent in self.entities.values()]
             entity_strings, _ = sorting_utils.sort_by_offset(
                 entity_strings, entity_offsets, key=lambda x: sum(x[1])
             )
@@ -87,9 +87,9 @@ class PubtatorAnnotation(BaseModel):
         relation_offsets = []
         for rel in self.relations:
             # Everything but the last item in a relation tuple is an entity, hence [:-1]
-            entity_strings = [self.clusters[ent_id].to_string() for ent_id in rel[:-1]]
+            entity_strings = [self.entities[ent_id].to_string() for ent_id in rel[:-1]]
             relation_string = sanitize_text(f'{" ".join(entity_strings)} @{rel[-1].upper()}@')
-            entity_offsets = [sum(self.clusters[ent_id].get_offsets()) for ent_id in rel[:-1]]
+            entity_offsets = [sum(self.entities[ent_id].get_offsets()) for ent_id in rel[:-1]]
             relation_strings.append(relation_string)
             relation_offsets.append(entity_offsets)
 
@@ -97,7 +97,7 @@ class PubtatorAnnotation(BaseModel):
             if self.filtered_relations:
                 filtered_relation_strings = []
                 for rel in self.filtered_relations:
-                    entity_strings = [self.clusters[ent_id].to_string() for ent_id in rel[:-1]]
+                    entity_strings = [self.entities[ent_id].to_string() for ent_id in rel[:-1]]
                     relation_string = sanitize_text(
                         f'{" ".join(entity_strings)} @{rel[-1].upper()}@'
                     )
@@ -150,6 +150,6 @@ def as_pubtator_annotation(dct):
     """To be used as `object_hook` with `json` methods to load serialized data as
     `PubtatorAnnotation` objects.
     """
-    if all(key in dct for key in ["text", "pmid", "clusters", "relations"]):
+    if all(key in dct for key in ["text", "pmid", "entities", "relations"]):
         return PubtatorAnnotation(**dct)
     return dct

@@ -7,8 +7,8 @@ from seq2rel_ds.common import schemas
 from seq2rel_ds.common.special_tokens import COREF_SEP_SYMBOL, HINT_SEP_SYMBOL
 
 
-def test_pubtator_cluster_to_string() -> None:
-    ent = schemas.PubtatorCluster(
+def test_pubtator_entity_to_string() -> None:
+    ent = schemas.PubtatorEntity(
         # Contains:
         # - multi-word mentions
         # - overlapping mentions
@@ -40,8 +40,8 @@ def test_pubtator_cluster_to_string() -> None:
     assert COREF_SEP_SYMBOL in actual
 
 
-def test_pubtator_cluster_get_offsets() -> None:
-    ent = schemas.PubtatorCluster(
+def test_pubtator_entity_get_offsets() -> None:
+    ent = schemas.PubtatorEntity(
         # We don't need actual mentions or a label to test this method.
         mentions=[
             "",
@@ -76,13 +76,13 @@ def test_insert_hints() -> None:
     pubator_annotation = schemas.PubtatorAnnotation(
         pmid="12160362",
         text=text,
-        clusters={
-            "348": schemas.PubtatorCluster(
+        entities={
+            "348": schemas.PubtatorEntity(
                 mentions=["Apolipoprotein E", "apolipoprotein E", "apoE"],
                 offsets=[(0, 17), (207, 223), (225, 229)],
                 label="Gene",
             ),
-            "D000544": schemas.PubtatorCluster(
+            "D000544": schemas.PubtatorEntity(
                 mentions=["Alzheimer disease", "Alzheimer disease", "Alzheimer disease"],
                 offsets=[(160, 177), (339, 356), (479, 496)],
                 label="Disease",
@@ -106,11 +106,11 @@ def test_insert_hints_compound() -> None:
     pubator_annotation = schemas.PubtatorAnnotation(
         pmid="9862868",
         text=text,
-        clusters={
-            "D002780": schemas.PubtatorCluster(
+        entities={
+            "D002780": schemas.PubtatorEntity(
                 mentions=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
             ),
-            "D001651": schemas.PubtatorCluster(
+            "D001651": schemas.PubtatorEntity(
                 mentions=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
             ),
         },
@@ -133,13 +133,13 @@ def test_insert_hints_overlapping() -> None:
     pubator_annotation = schemas.PubtatorAnnotation(
         pmid="8844208",
         text=text,
-        clusters={
-            "2155": schemas.PubtatorCluster(
+        entities={
+            "2155": schemas.PubtatorEntity(
                 mentions=["coagulation factor VII", "coagulation factor VII"],
                 offsets=[(44, 67), (222, 244)],
                 label="Gene",
             ),
-            "D005168": schemas.PubtatorCluster(
+            "D005168": schemas.PubtatorEntity(
                 mentions=["factor VII deficiency", "factor VII deficiency"],
                 offsets=[(56, 78), (234, 255)],
                 label="Disease",
@@ -166,11 +166,11 @@ def test_insert_hints_no_mutation() -> None:
     pubator_annotation = schemas.PubtatorAnnotation(
         pmid="9862868",
         text=text,
-        clusters={
-            "D002780": schemas.PubtatorCluster(
+        entities={
+            "D002780": schemas.PubtatorEntity(
                 mentions=["intrahepatic cholestasis"], offsets=[(87, 128)], label="Disease"
             ),
-            "D001651": schemas.PubtatorCluster(
+            "D001651": schemas.PubtatorEntity(
                 mentions=["extrahepatic cholestasis"], offsets=[(104, 128)], label="Disease"
             ),
         },
@@ -181,7 +181,7 @@ def test_insert_hints_no_mutation() -> None:
 
     assert pubator_annotation.text != expected.text
     assert pubator_annotation.pmid == expected.pmid
-    assert pubator_annotation.clusters == expected.clusters
+    assert pubator_annotation.entities == expected.entities
     assert pubator_annotation.relations == expected.relations
 
 
@@ -195,23 +195,23 @@ def test_pubtator_annotation_to_string() -> None:
         # We don't need text or a PMID to test this method.
         pmid="",
         text="",
-        clusters={
-            "D008094": schemas.PubtatorCluster(
+        entities={
+            "D008094": schemas.PubtatorEntity(
                 mentions=["lithium", "lithium", "Li", "Li"],
                 offsets=[(54, 61), (111, 118), (941, 943), (1333, 1335)],
                 label="Chemical",
             ),
-            "D006973": schemas.PubtatorCluster(
+            "D006973": schemas.PubtatorEntity(
                 mentions=["hypertension", "hypertension"],
                 offsets=[(1000, 1012), (1500, 1512)],
                 label="Disease",
             ),
-            "D011507": schemas.PubtatorCluster(
+            "D011507": schemas.PubtatorEntity(
                 mentions=["proteinuria", "proteinuria"],
                 offsets=[(975, 986), (1466, 1477)],
                 label="Disease",
             ),
-            "D007676": schemas.PubtatorCluster(
+            "D007676": schemas.PubtatorEntity(
                 mentions=["chronic renal failure", "chronic renal failure"],
                 offsets=[(70, 91), (1531, 1552)],
                 label="Disease",
@@ -268,6 +268,6 @@ def test_as_pubtator_annotation(dummy_annotation_json) -> None:
     actual = json.loads(dummy_annotation_json, object_hook=schemas.as_pubtator_annotation)
     assert isinstance(actual.pmid, str)
     assert isinstance(actual, schemas.PubtatorAnnotation)
-    for uid, cluster in actual.clusters.items():
+    for uid, ent in actual.entities.items():
         assert isinstance(uid, str)
-        assert isinstance(cluster, schemas.PubtatorCluster)
+        assert isinstance(ent, schemas.PubtatorEntity)

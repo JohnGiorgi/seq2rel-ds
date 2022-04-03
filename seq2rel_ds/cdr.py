@@ -56,8 +56,8 @@ def _filter_hypernyms(pubtator_annotations: List[PubtatorAnnotation]) -> None:
     for annotation in pubtator_annotations:
         if annotation.relations:
             chem_id, diso_id, rel_label = annotation.relations[0]
-            chem_label = annotation.clusters[chem_id].label
-            diso_label = annotation.clusters[diso_id].label
+            chem_label = annotation.entities[chem_id].label
+            diso_label = annotation.entities[diso_id].label
             break
 
     for annotation in pubtator_annotations:
@@ -68,10 +68,10 @@ def _filter_hypernyms(pubtator_annotations: List[PubtatorAnnotation]) -> None:
         # Determine the negative relations by taking the set of the product of all unique chemical
         # and disease entities, minus the set of all positive relations.
         chemicals = [
-            ent_id for ent_id, ann in annotation.clusters.items() if ann.label == chem_label
+            ent_id for ent_id, ann in annotation.entities.items() if ann.label == chem_label
         ]
         diseases = [
-            ent_id for ent_id, ann in annotation.clusters.items() if ann.label == diso_label
+            ent_id for ent_id, ann in annotation.entities.items() if ann.label == diso_label
         ]
         all_relations = [
             (chem, diso, rel_label) for chem, diso in itertools.product(chemicals, diseases)
