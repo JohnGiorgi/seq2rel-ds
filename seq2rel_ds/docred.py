@@ -90,7 +90,11 @@ def main(
         True, help="Sort relations according to order of first appearance."
     ),
 ) -> None:
-    """Download and preprocess the DocRED corpus for use with seq2rel."""
+    """Download and preprocess the DocRED corpus for use with seq2rel.
+
+    This is the end-to-end split provided by https://arxiv.org/abs/2102.05980, which can be
+    accessed here: http://lavis.cs.hs-rm.de/storage/jerex/public/datasets/docred_joint/.
+    """
     msg.divider("Preprocessing DocRED")
 
     with msg.loading("Downloading corpus..."):
