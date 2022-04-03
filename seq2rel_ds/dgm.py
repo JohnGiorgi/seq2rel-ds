@@ -32,16 +32,20 @@ def _convert_to_pubtator(examples: List[Dict[str, Any]]) -> str:
                     mention["type"],
                     mention["name"],
                 )
-                # The corpus gives us token offsets, but we need character offsets.
-                # Find the character offsets of the mention, according to its first appearance.
+                # The corpus gives us token offsets, but we need character offsets. To handle this,
+                # we join the mention tokens on whitespace and clean the resulting string similar
+                # to the abstract text, and then find and accumulate all overlapping mentions in
+                # the cleaned abstract tex.
                 mention_text = " ".join(paragraph[start:end]).strip()
-                # Clean the mention text the same way as the abstract text in order to find a match.
                 mention_text = text_utils.sanitize_text(mention_text)
-                char_start = abstract.find(mention_text)
-                char_end = char_start + len(mention_text)
-                pubtator_mentions += (
-                    f"{pmid}\t{char_start}\t{char_end}\t{mention_text}\t{ent_type}\t{uid}\n"
-                )
+                char_offsets = [
+                    (start, start + len(mention_text))
+                    for start in text_utils.findall(abstract, mention_text)
+                ]
+                for char_start, char_end in char_offsets:
+                    pubtator_mentions += (
+                        f"{pmid}\t{char_start}\t{char_end}\t{mention_text}\t{ent_type}\t{uid}\n"
+                    )
         pubtator_mentions = pubtator_mentions.strip()
 
         # Convert the relations to PubTator format.
@@ -102,7 +106,7 @@ def main(
         0.2,
         help=(
             "Fraction of training examples to hold out as a validation set. The original validation"
-            " set is used as the test set, as the test set does not contain paragraph-level annotations",
+            " set is used as the test set, as the test set does not contain paragraph-level annotations"
         ),
     ),
 ) -> None:

@@ -126,7 +126,7 @@ pyflakes = ">=2.3.0,<2.4.0"
 
 [[package]]
 name = "hypothesis"
-version = "6.40.2"
+version = "6.41.0"
 description = "A library for property-based testing"
 category = "dev"
 optional = false
@@ -502,7 +502,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "803a1e27aadd510fbf243d47dbb4eb8dd9a3f12778d5ec74638bc5e4e427b269"
+content-hash = "abf8572e891494453032360e7c85d19c9bf4b6f0fe095cf3a4550fbad95e8a80"
 
 [metadata.files]
 atomicwrites = [
@@ -622,8 +622,8 @@ flake8 = [
     {file = "flake8-3.9.2.tar.gz", hash = "sha256:07528381786f2a6237b061f6e96610a4167b226cb926e2aa2b6b1d78057c576b"},
 ]
 hypothesis = [
-    {file = "hypothesis-6.40.2-py3-none-any.whl", hash = "sha256:cf2e300b018c1cb0647fabbd4fbbb40bf62bd17be11f82748092c8f9bc034efb"},
-    {file = "hypothesis-6.40.2.tar.gz", hash = "sha256:49e82f9aed63836e5c40081aaa795cffe9f4322f39caa188b903cfd4c6942733"},
+    {file = "hypothesis-6.41.0-py3-none-any.whl", hash = "sha256:ca931c5a6414f3f9636fdaf978a216ee9b5c4a6b4415adf628e9d5e5003dcd99"},
+    {file = "hypothesis-6.41.0.tar.gz", hash = "sha256:de48abb676fc76e4397cd002926e5747cef518570d132221244d27e1075c0bec"},
 ]
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
