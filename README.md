@@ -5,7 +5,7 @@
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 ![GitHub](https://img.shields.io/github/license/JohnGiorgi/seq2rel?color=blue)
 
-This is a companion repository to [`seq2rel`](https://github.com/JohnGiorgi/seq2rel) which aims to make it easy to generate training data.
+This is a companion repository to [`seq2rel`](https://github.com/JohnGiorgi/seq2rel), which makes it easy to preprocess training data.
 
 ## Installation
 
@@ -13,11 +13,11 @@ This repository requires Python 3.8 or later.
 
 ### Setting up a virtual environment
 
-Before installing, you should create and activate a Python virtual environment. If you need pointers on setting up a virtual environment environment, please see the [AllenNLP install instructions](https://github.com/allenai/allennlp#installing-via-pip).
+Before installing, you should create and activate a Python virtual environment. If you need pointers on setting up a virtual environment, please see the [AllenNLP install instructions](https://github.com/allenai/allennlp#installing-via-pip).
 
 ### Installing the library and dependencies
 
-If you _don't_ plan on modifying the source code, install from `git` using `pip`
+If you _do not_ plan on modifying the source code, install from `git` using `pip`
 
 ```bash
 pip install git+https://github.com/JohnGiorgi/seq2rel-ds.git
@@ -39,7 +39,7 @@ poetry install
 
 ## Usage
 
-Installing this package gives you access to simple `seq2rel-ds` command line tool. To see the list of available commands, run:
+Installing this package gives you access to a simple command-line tool, `seq2rel-ds`. To see the list of available commands, run:
 
 ```bash
 seq2rel-ds --help
@@ -55,13 +55,13 @@ seq2rel-ds preprocess cdr main "path/to/cdr"
 
 > Note, you have to include `main` because [`typer`](https://typer.tiangolo.com/) does not support default commands.
 
-This will create the preprocessed `tsv` files under the specificed output directory, e.g.
+This will create the preprocessed `tsv` files under the specified output directory, e.g.
 
 ```
 cdr
- ┣ test.tsv
  ┣ train.tsv
- ┗ valid.tsv
+ ┣ valid.tsv
+ ┗ test.tsv
 ```
 
 which can then be used to train a [`seq2rel`](https://github.com/JohnGiorgi/seq2rel) model.
