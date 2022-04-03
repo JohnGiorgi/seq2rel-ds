@@ -100,66 +100,66 @@ def test_parse_pubtator() -> None:
     {pmid}\tCID\tD001569\tD005221
     """
 
-    title_clusters = {
-        "D001569": schemas.PubtatorCluster(
+    title_entities = {
+        "D001569": schemas.PubtatorEntity(
             mentions=["benzodiazepines"],
             offsets=[(28, 43)],
             label="Chemical",
         ),
     }
-    abstract_clusters = {
-        "D001569": schemas.PubtatorCluster(
+    abstract_entities = {
+        "D001569": schemas.PubtatorEntity(
             mentions=["benzodiazepines", "BZDs", "BZDs"],
             offsets=[(219, 234), (253, 257), (583, 587)],
             label="Chemical",
         ),
-        "D005221": schemas.PubtatorCluster(
+        "D005221": schemas.PubtatorEntity(
             mentions=["tiredness"], offsets=[(1817, 1826)], label="Disease"
         ),
     }
-    both_clusters = {
-        "D001569": schemas.PubtatorCluster(
-            mentions=title_clusters["D001569"].mentions + abstract_clusters["D001569"].mentions,
-            offsets=title_clusters["D001569"].offsets + abstract_clusters["D001569"].offsets,
+    both_entities = {
+        "D001569": schemas.PubtatorEntity(
+            mentions=title_entities["D001569"].mentions + abstract_entities["D001569"].mentions,
+            offsets=title_entities["D001569"].offsets + abstract_entities["D001569"].offsets,
             label="Chemical",
         ),
-        "D005221": schemas.PubtatorCluster(
+        "D005221": schemas.PubtatorEntity(
             mentions=["tiredness"], offsets=[(1817, 1826)], label="Disease"
         ),
     }
 
     # Title only
     expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=title_text, clusters=title_clusters, relations=[]
+        pmid=pmid, text=title_text, entities=title_entities, relations=[]
     )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.title)
     # Breaking up the asserts leads to much clearer outputs when the test fails
     assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
+    assert actual[0].entities == expected.entities
     assert actual[0].relations == expected.relations
 
     # Abstract only
     expected = schemas.PubtatorAnnotation(
         pmid=pmid,
         text=abstract_text,
-        clusters=abstract_clusters,
+        entities=abstract_entities,
         relations=[("D001569", "D005221", "CID")],
     )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.abstract)
     assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
+    assert actual[0].entities == expected.entities
     assert actual[0].relations == expected.relations
 
     # Both
     expected = schemas.PubtatorAnnotation(
         pmid=pmid,
         text=f"{title_text} {abstract_text}",
-        clusters=both_clusters,
+        entities=both_entities,
         relations=[("D001569", "D005221", "CID")],
     )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.both)
     assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
+    assert actual[0].entities == expected.entities
     assert actual[0].relations == expected.relations
 
 
@@ -232,21 +232,21 @@ def test_parse_pubtator_compound_ent() -> None:
     expected = schemas.PubtatorAnnotation(
         pmid=pmid,
         text=f"{title_text} {abstract_text}",
-        clusters={
-            "D019259": schemas.PubtatorCluster(
+        entities={
+            "D019259": schemas.PubtatorEntity(
                 mentions=["lamivudine"],
                 offsets=[(26, 36)],
                 label="Chemical",
             ),
-            "D012964": schemas.PubtatorCluster(
+            "D012964": schemas.PubtatorEntity(
                 mentions=["na"], offsets=[(59, 61)], label="Chemical"
             ),
-            "D006509": schemas.PubtatorCluster(
+            "D006509": schemas.PubtatorEntity(
                 mentions=["hepatitis B virus (HBV) infected", "HBV infected"],
                 offsets=[(66, 98), (186, 209)],
                 label="Disease",
             ),
-            "D015658": schemas.PubtatorCluster(
+            "D015658": schemas.PubtatorEntity(
                 mentions=["HIV co-infection", "HIV infected"],
                 offsets=[(125, 141), (194, 209)],
                 label="Disease",
@@ -255,7 +255,7 @@ def test_parse_pubtator_compound_ent() -> None:
     )
     actual = util.parse_pubtator(pubtator_content, text_segment=util.TextSegment.both)
     assert actual[0].text == expected.text
-    assert actual[0].clusters == expected.clusters
+    assert actual[0].entities == expected.entities
     assert actual[0].relations == expected.relations
 
 
@@ -280,22 +280,22 @@ def test_query_pubtator() -> None:
         " mitochondria. These findings suggest that RNF5 negatively regulates virus-triggered"
         " signaling by targeting MITA for ubiquitination and degradation at the mitochondria."
     )
-    title_clusters = {
-        "6048": schemas.PubtatorCluster(
+    title_entities = {
+        "6048": schemas.PubtatorEntity(
             mentions=["RNF5"],
             offsets=[(21, 25)],
             label="Gene",
         ),
-        "340061": schemas.PubtatorCluster(mentions=["MITA"], offsets=[(104, 108)], label="Gene"),
+        "340061": schemas.PubtatorEntity(mentions=["MITA"], offsets=[(104, 108)], label="Gene"),
     }
-    abstract_clusters = {
-        "4790": schemas.PubtatorCluster(mentions=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
-        "3661": schemas.PubtatorCluster(
+    abstract_entities = {
+        "4790": schemas.PubtatorEntity(mentions=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
+        "3661": schemas.PubtatorEntity(
             mentions=["IRF3", "IRF3", "IRF3"],
             offsets=[(172, 176), (378, 382), (554, 558)],
             label="Gene",
         ),
-        "340061": schemas.PubtatorCluster(
+        "340061": schemas.PubtatorEntity(
             mentions=["MITA", "STING", "MITA", "MITA", "MITA", "MITA", "MITA"],
             offsets=[
                 (270, 274),
@@ -308,7 +308,7 @@ def test_query_pubtator() -> None:
             ],
             label="Gene",
         ),
-        "6048": schemas.PubtatorCluster(
+        "6048": schemas.PubtatorEntity(
             mentions=["RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5", "RNF5"],
             offsets=[
                 (440, 444),
@@ -321,31 +321,31 @@ def test_query_pubtator() -> None:
             ],
             label="Gene",
         ),
-        "3456": schemas.PubtatorCluster(mentions=["IFNB1"], offsets=[(571, 576)], label="Gene"),
+        "3456": schemas.PubtatorEntity(mentions=["IFNB1"], offsets=[(571, 576)], label="Gene"),
     }
-    both_clusters = {
-        "6048": schemas.PubtatorCluster(
-            mentions=title_clusters["6048"].mentions + abstract_clusters["6048"].mentions,
-            offsets=title_clusters["6048"].offsets + abstract_clusters["6048"].offsets,
+    both_entities = {
+        "6048": schemas.PubtatorEntity(
+            mentions=title_entities["6048"].mentions + abstract_entities["6048"].mentions,
+            offsets=title_entities["6048"].offsets + abstract_entities["6048"].offsets,
             label="Gene",
         ),
-        "340061": schemas.PubtatorCluster(
-            mentions=title_clusters["340061"].mentions + abstract_clusters["340061"].mentions,
-            offsets=title_clusters["340061"].offsets + abstract_clusters["340061"].offsets,
+        "340061": schemas.PubtatorEntity(
+            mentions=title_entities["340061"].mentions + abstract_entities["340061"].mentions,
+            offsets=title_entities["340061"].offsets + abstract_entities["340061"].offsets,
             label="Gene",
         ),
-        "4790": schemas.PubtatorCluster(mentions=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
-        "3661": schemas.PubtatorCluster(
-            mentions=abstract_clusters["3661"].mentions,
-            offsets=abstract_clusters["3661"].offsets,
+        "4790": schemas.PubtatorEntity(mentions=["NF-kappaB"], offsets=[(158, 167)], label="Gene"),
+        "3661": schemas.PubtatorEntity(
+            mentions=abstract_entities["3661"].mentions,
+            offsets=abstract_entities["3661"].offsets,
             label="Gene",
         ),
-        "3456": schemas.PubtatorCluster(mentions=["IFNB1"], offsets=[(571, 576)], label="Gene"),
+        "3456": schemas.PubtatorEntity(mentions=["IFNB1"], offsets=[(571, 576)], label="Gene"),
     }
 
     # Title only
     expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=title_text, clusters=title_clusters, relations=[]
+        pmid=pmid, text=title_text, entities=title_entities, relations=[]
     )
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.title
@@ -353,29 +353,29 @@ def test_query_pubtator() -> None:
     # Breaking up the asserts leads to much clearer outputs when the test fails
     assert len(actual) == 1
     assert actual[expected.pmid].text == expected.text
-    assert actual[expected.pmid].clusters == expected.clusters
+    assert actual[expected.pmid].entities == expected.entities
     assert actual[expected.pmid].relations == expected.relations
 
     # Abstract only
     expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=abstract_text, clusters=abstract_clusters, relations=[]
+        pmid=pmid, text=abstract_text, entities=abstract_entities, relations=[]
     )
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.abstract
     )
     assert len(actual) == 1
     assert actual[expected.pmid].text == expected.text
-    assert actual[expected.pmid].clusters == expected.clusters
+    assert actual[expected.pmid].entities == expected.entities
     assert actual[expected.pmid].relations == expected.relations
 
     # Both
     expected = schemas.PubtatorAnnotation(
-        pmid=pmid, text=f"{title_text} {abstract_text}", clusters=both_clusters, relations=[]
+        pmid=pmid, text=f"{title_text} {abstract_text}", entities=both_entities, relations=[]
     )
     actual = util.query_pubtator(
         pmids=[pmid], concepts=["gene"], text_segment=util.TextSegment.both
     )
     assert len(actual) == 1
     assert actual[expected.pmid].text == expected.text
-    assert actual[expected.pmid].clusters == expected.clusters
+    assert actual[expected.pmid].entities == expected.entities
     assert actual[expected.pmid].relations == expected.relations

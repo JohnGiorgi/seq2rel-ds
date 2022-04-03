@@ -89,23 +89,23 @@ class TestCDR(Seq2RelDSTestCase):
                 " literature review of all previously reported cases."
             ),
             pmid="",
-            clusters={
-                "D002220": schemas.PubtatorCluster(
+            entities={
+                "D002220": schemas.PubtatorEntity(
                     mentions=["Carbamazepine", "carbamazepine"],
                     offsets=[(0, 13), (115, 128)],
                     label="Chemical",
                 ),
-                "D006331": schemas.PubtatorCluster(
+                "D006331": schemas.PubtatorEntity(
                     mentions=["cardiac dysfunction"],
                     offsets=[(22, 41)],
                     label="Disease",
                 ),
-                "D001919": schemas.PubtatorCluster(
+                "D001919": schemas.PubtatorEntity(
                     mentions=["bradycardia"],
                     offsets=[(64, 75)],
                     label="Disease",
                 ),
-                "D054537": schemas.PubtatorCluster(
+                "D054537": schemas.PubtatorEntity(
                     mentions=["atrioventricular block"],
                     offsets=[(80, 102)],
                     label="Disease",
