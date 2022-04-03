@@ -83,7 +83,7 @@ def _preprocess(
     return seq2rel_annotations
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def main(
     output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
     sort_rels: bool = typer.Option(

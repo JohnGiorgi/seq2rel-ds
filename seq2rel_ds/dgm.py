@@ -87,7 +87,7 @@ def _preprocess(
     return seq2rel_annotations
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def main(
     input_dir: Path = typer.Argument(..., help="Path to a local copy of the DGM corpus."),
     output_dir: Path = typer.Argument(..., help="Directory path to save the preprocessed data."),
@@ -111,6 +111,7 @@ def main(
     ),
 ) -> None:
     """Download and preprocess the DGM corpus for use with seq2rel.
+
     The corpus can be downloaded at: https://hanover.azurewebsites.net/downloads/naacl2019.aspx.
     Provide this path as argument `input_dir` to this command. More details about the corpus can be
     found here: https://arxiv.org/abs/1904.02347. Note that we use the paragraph-length text.
