@@ -69,6 +69,7 @@ def _preprocess(
     examples: List[Dict[str, Any]],
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
+    report_corpus_statistics: bool = False,
 ) -> List[str]:
     kwargs = (
         {"concepts": ["chemical", "gene", "mutation"], "skip_malformed": True}
@@ -81,6 +82,11 @@ def _preprocess(
         pubtator_content=pubtator_content,
         text_segment=util.TextSegment.abstract,
     )
+
+    if report_corpus_statistics:
+        corpus_statistics = util.compute_corpus_statistics(pubtator_annotations)
+        print(corpus_statistics)
+
     seq2rel_annotations = util.pubtator_to_seq2rel(
         pubtator_annotations, sort_rels=sort_rels, entity_hinting=entity_hinting, **kwargs
     )
@@ -151,7 +157,12 @@ def main(
         # Because we don't have paragraph level annotations for the test set, we will use
         # the entire validation set as the test set and hold out some data from the training set
         # as the new validation set.
-        test = _preprocess(valid_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
+        test = _preprocess(
+            valid_raw,
+            sort_rels=sort_rels,
+            entity_hinting=entity_hinting,
+            report_corpus_statistics=True,
+        )
     msg.good("Preprocessed the data.")
 
     output_dir = Path(output_dir)

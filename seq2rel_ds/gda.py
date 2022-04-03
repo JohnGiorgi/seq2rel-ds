@@ -89,6 +89,7 @@ def _preprocess(
     examples: List[str],
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
+    report_corpus_statistics: bool = False,
 ) -> List[str]:
     kwargs = {"concepts": ["gene", "disease"], "skip_malformed": True} if entity_hinting else {}
 
@@ -98,6 +99,10 @@ def _preprocess(
         pubtator_content=pubtator_content,
         text_segment=util.TextSegment.both,
     )
+
+    if report_corpus_statistics:
+        corpus_statistics = util.compute_corpus_statistics(pubtator_annotations)
+        print(corpus_statistics)
 
     seq2rel_annotations = util.pubtator_to_seq2rel(
         pubtator_annotations, sort_rels=sort_rels, entity_hinting=entity_hinting, **kwargs
@@ -142,7 +147,12 @@ def main(
         train = _preprocess(train_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
     msg.good("Preprocessed the training data.")
     with msg.loading("Preprocessing the test data..."):
-        test = _preprocess(test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
+        test = _preprocess(
+            test_raw,
+            sort_rels=sort_rels,
+            entity_hinting=entity_hinting,
+            report_corpus_statistics=True,
+        )
     msg.good("Preprocessed the test data.")
 
     output_dir = Path(output_dir)

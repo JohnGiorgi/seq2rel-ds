@@ -72,12 +72,18 @@ def _preprocess(
     examples: List[Dict[str, Any]],
     rel_labels: Optional[Dict[str, str]] = None,
     sort_rels: bool = True,
+    report_corpus_statistics: bool = False,
 ) -> List[str]:
     pubtator_content = _convert_to_pubtator(examples, rel_labels=rel_labels)
     pubtator_annotations = util.parse_pubtator(
         pubtator_content=pubtator_content,
         text_segment=util.TextSegment.abstract,
     )
+
+    if report_corpus_statistics:
+        corpus_statistics = util.compute_corpus_statistics(pubtator_annotations)
+        print(corpus_statistics)
+
     seq2rel_annotations = util.pubtator_to_seq2rel(pubtator_annotations, sort_rels=sort_rels)
 
     return seq2rel_annotations
@@ -103,7 +109,9 @@ def main(
     with msg.loading("Preprocessing the data..."):
         train = _preprocess(train_raw, rel_labels=rel_labels, sort_rels=sort_rels)
         valid = _preprocess(valid_raw, rel_labels=rel_labels, sort_rels=sort_rels)
-        test = _preprocess(test_raw, rel_labels=rel_labels, sort_rels=sort_rels)
+        test = _preprocess(
+            test_raw, rel_labels=rel_labels, sort_rels=sort_rels, report_corpus_statistics=True
+        )
     msg.good("Preprocessed the data.")
 
     output_dir = Path(output_dir)
