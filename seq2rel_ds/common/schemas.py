@@ -9,18 +9,6 @@ from seq2rel_ds.common import sorting_utils, special_tokens
 from seq2rel_ds.common.text_utils import sanitize_text
 
 
-class PartitionStatistics(BaseModel):
-    num_examples: int
-    num_relations: int
-    per_inter_sent: float
-
-
-class CorpusStatistics(BaseModel):
-    train: PartitionStatistics
-    valid: PartitionStatistics
-    test: PartitionStatistics
-
-
 class AlignedExample(BaseModel):
     doc_id: str
     text: str

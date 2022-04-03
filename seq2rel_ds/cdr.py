@@ -98,7 +98,6 @@ def _preprocess(
     sort_rels: bool = True,
     entity_hinting: Optional[EntityHinting] = None,
     filter_hypernyms: bool = False,
-    report_corpus_statistics=False,
 ) -> List[str]:
     kwargs = {"concepts": ["chemical", "disease"], "skip_malformed": True} if entity_hinting else {}
 
@@ -106,10 +105,6 @@ def _preprocess(
         pubtator_content=pubtator_content,
         text_segment=util.TextSegment.both,
     )
-
-    if report_corpus_statistics:
-        corpus_statistics = util.compute_corpus_statistics(pubtator_annotations)
-        print(corpus_statistics)
 
     # This is unique the the CDR corpus, which contains many negative relations that are
     # actually valid, but are not annotated because they contain a disease entity which is the
@@ -172,11 +167,7 @@ def main(
             )
         train = _preprocess(train_raw, sort_rels=sort_rels, entity_hinting=entity_hinting)
         test = _preprocess(
-            test_raw,
-            sort_rels=sort_rels,
-            entity_hinting=entity_hinting,
-            filter_hypernyms=True,
-            report_corpus_statistics=True,
+            test_raw, sort_rels=sort_rels, entity_hinting=entity_hinting, filter_hypernyms=True
         )
     msg.good("Preprocessed the data.")
 

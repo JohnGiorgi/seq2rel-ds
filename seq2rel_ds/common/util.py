@@ -8,14 +8,13 @@ from zipfile import ZipFile
 
 import numpy as np
 import requests
-import spacy
 from more_itertools import chunked
 from requests.adapters import HTTPAdapter
 from sklearn.model_selection import train_test_split
 from urllib3.util.retry import Retry
 
 from seq2rel_ds.common import sorting_utils
-from seq2rel_ds.common.schemas import PartitionStatistics, PubtatorAnnotation, PubtatorCluster
+from seq2rel_ds.common.schemas import PubtatorAnnotation, PubtatorCluster
 
 # Seeds
 SEED = 13370
@@ -110,51 +109,6 @@ def train_valid_test_split(
     train, test = train_test_split(data, test_size=round(1 - train_size, 4), **kwargs)
     valid, test = train_test_split(test, test_size=test_size / (test_size + valid_size), **kwargs)
     return train, valid, test
-
-
-def compute_corpus_statistics(
-    annotations: List[PubtatorAnnotation],
-    nlp=None,
-) -> PartitionStatistics:
-    """
-    Computes several corpus statistics give a list of `PubtatorAnnotation` objects, including
-    number of examples, number of relations, and the fraction of relations that are inter-sentence.
-    """
-    num_relations = 0
-    num_inter_sent = 0
-
-    # Not ideal to load the model every time the function is called, but it is fast enough.
-    nlp = nlp or spacy.load("en_core_web_sm", disable=["ner"])
-
-    # Faster to process all text with `pipe` than to process text one at a time.
-    # See: https://spacy.io/usage/processing-pipelines#processing
-    docs = list(nlp.pipe([ann.text for ann in annotations]))
-
-    for ann, doc in zip(annotations, docs):
-        print(ann)
-        print()
-        num_relations += len(ann.relations)
-        for relation in ann.relations:
-            inter_sent = True
-            # Collect the offsets of all mentions off all entities in the relation.
-            mention_offsets = [ann.clusters[relation[i]].offsets for i in range(len(relation) - 1)]
-            # If any sentence in the document contains at least one mention from each entity in a
-            # relation, we consider it an intra-sentence relation.
-            for sent in doc.sents:
-                if all(
-                    all(start >= sent.start_char and end <= sent.end_char for start, end in offsets)
-                    for offsets in mention_offsets
-                ):
-                    inter_sent = False
-                    break
-            num_inter_sent += int(inter_sent)
-
-    statistics = PartitionStatistics(
-        num_examples=len(annotations),
-        num_relations=num_relations,
-        per_inter_sent=round(num_inter_sent / num_relations, 3),
-    )
-    return statistics
 
 
 def parse_pubtator(
