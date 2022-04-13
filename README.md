@@ -50,7 +50,7 @@ seq2rel-ds --help
 To preprocess a dataset (and in most cases, download it), call one of the commands, e.g.
 
 ```bash
-seq2rel-ds preprocess cdr main "path/to/cdr"
+seq2rel-ds cdr main "path/to/cdr"
 ```
 
 > Note, you have to include `main` because [`typer`](https://typer.tiangolo.com/) does not support default commands.
