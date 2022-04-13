@@ -32,7 +32,7 @@ classifiers = [
 exclude = ["tests", "test_fixtures"]
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
+python = "^3.7.13"
 typer = {extras = ["all"], version = "^0.4.1"}
 more-itertools = "^8.10.0"
 wasabi = "^0.8.2"
